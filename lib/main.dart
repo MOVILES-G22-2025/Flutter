@@ -1,12 +1,15 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'common/navigation_bar.dart';
+import 'main_screen.dart';
 import 'constants.dart';
 
 void main() {
-  runApp(senemarket());
+  runApp(const SenemarketApp());
 }
 
-class senemarket extends StatelessWidget {
+class SenemarketApp extends StatelessWidget {
+  const SenemarketApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -17,46 +20,7 @@ class senemarket extends StatelessWidget {
           bodyMedium: TextStyle(fontFamily: 'Cabin'),
         ),
       ),
-      home: MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    Text('Home Page'),
-    Text('Chats Page'),
-    Text('Sell Page'),
-    Text('Favorites Page'),
-    Text('Profile Page'),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Marketplace App'),
-      ),
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: NavigationBarApp(
-        onItemTapped: _onItemTapped,
-        selectedIndex: _selectedIndex,
-      ),
+      home: const MainScreen(),
     );
   }
 }
