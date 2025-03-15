@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+
 class NavigationBarApp extends StatefulWidget {
   final ValueChanged<int> onItemTapped;
   final int selectedIndex;
