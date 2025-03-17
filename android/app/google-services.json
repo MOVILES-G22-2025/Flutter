@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "153311830773",
+    "project_id": "senemarket-app",
+    "storage_bucket": "senemarket-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:153311830773:android:1fc74344eff838f55d1bbc",
+        "android_client_info": {
+          "package_name": "com.example.senemarket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSazbKs8zCeD1zFubqmGXox7o1QnxsYbY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -35,7 +35,6 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Description
               const Text(
                 'Find everything you need for your career in one place',
                 textAlign: TextAlign.center,
@@ -76,7 +75,7 @@ class LoginPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Dont have an account? ',
+                    'New to SeneMarket? ',
                     style: TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 14,
@@ -91,7 +90,7 @@ class LoginPage extends StatelessWidget {
                       );
                     },
                     child: const Text(
-                      'Sign up',
+                      'Create account',
                       style: TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 14,
