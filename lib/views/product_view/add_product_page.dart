@@ -1,5 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../common/navigation_bar.dart';
 import '../../constants.dart';
 import 'custom_dropdown.dart';
@@ -72,6 +77,50 @@ class _AddProductPageState extends State<AddProductPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<String?> _uploadImageToFirebase(XFile image) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      final ref =
+          FirebaseStorage.instance.ref().child('product_images/$fileName');
+      await ref.putFile(File(image.path));
+
+      //Get the URL of the uploaded image
+      String imageUrl = await ref.getDownloadURL();
+      return imageUrl;
+    } catch (e) {
+      print("Error uploading image: $e");
+      return null;
+    }
+  }
+
+  Future<void> _saveProduct() async {
+    if (_isFormValid) {
+      String? imageUrl = await _uploadImageToFirebase(_images.first!);
+
+      if (imageUrl != null) {
+        final User? user = FirebaseAuth.instance.currentUser;
+        final String? uid = user?.uid;
+
+        if (uid != null) {
+          // Save product details in Firestore
+          await FirebaseFirestore.instance.collection('products').add({
+            'name': _nameController.text,
+            'description': _descriptionController.text,
+            'category': _selectedCategory,
+            'price': _priceController.text,
+            'imageUrl': imageUrl,
+            'timestamp': FieldValue.serverTimestamp(),
+            'userId': uid, //Associate product with the user
+          });
+
+          Navigator.pop(context);
+        }
+      }
+    } else {
+      _showSnackBar('Please fill in all the fields');
+    }
   }
 
   void _onItemTapped(int index) {
@@ -158,15 +207,11 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                   ),
                   onPressed: _isFormValid
-                      ? () {
+                      ? () async {
+                          await _saveProduct();
                           Navigator.pushReplacementNamed(
                             context,
                             '/home',
-                            arguments: {
-                              "image": _images.first?.path,
-                              "name": _nameController.text,
-                              "price": _priceController.text,
-                            },
                           );
                         }
                       : null,
