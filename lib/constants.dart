@@ -17,3 +17,12 @@ class AppColors {
   static const Color secondary60 = Color(0xFFECECEC);
   static const Color secondary70 = Color(0xFFF2F2F2);
 }
+
+class ProductClassification {
+  static const List<String> categories = [
+    "Category 1",
+    "Category 2",
+    "Category 3"
+  ];
+  static const List<String> types = ["Type 1", "Type 2", "Type 3"];
+}
