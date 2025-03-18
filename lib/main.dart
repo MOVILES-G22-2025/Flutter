@@ -16,8 +16,10 @@ class senemarket extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const LoginPage(),
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/login',
       routes: {
+        '/login': (context) => const LoginPage(),
         '/signIn': (context) => const SignInPage(),
         '/signUp': (context) => const SignUpPage(),
         '/home': (context) => HomePage(),

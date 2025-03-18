@@ -20,9 +20,12 @@ class AppColors {
 
 class ProductClassification {
   static const List<String> categories = [
-    "Category 1",
-    "Category 2",
-    "Category 3"
+    "Academic materials",
+    "Technology and electronics",
+    "Transportation",
+    "Clothing and accessories",
+    "Housing",
+    "Entertainment",
+    "Sports and fitness"
   ];
-  static const List<String> types = ["Type 1", "Type 2", "Type 3"];
 }
