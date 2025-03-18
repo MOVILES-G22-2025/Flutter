@@ -94,6 +94,7 @@ class _SignInPageState extends State<SignInPage> {
                   child: const Text(
                     'Forgot password?',
                     style: TextStyle(
+                      fontFamily: 'Cabin',
                       fontSize: 14,
                       color: AppColors.primary30,
                     ),
@@ -127,7 +128,10 @@ class _SignInPageState extends State<SignInPage> {
                 children: [
                   const Text(
                     'New to SeneMarket? ',
-                    style: TextStyle(fontSize: 14, color: AppColors.primary0),
+                    style: TextStyle(
+                        fontFamily: 'Cabin',
+                        fontSize: 14,
+                        color: AppColors.primary0),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -140,6 +144,7 @@ class _SignInPageState extends State<SignInPage> {
                     child: const Text(
                       'Create account',
                       style: TextStyle(
+                        fontFamily: 'Cabin',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary30,
@@ -163,6 +168,12 @@ class _SignInPageState extends State<SignInPage> {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        style: const TextStyle(
+          fontFamily: 'Cabin',
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.primary0,
+        ),
         onChanged: (value) {
           setState(() {
             _emptyFields[fieldKey] = value.isEmpty;
