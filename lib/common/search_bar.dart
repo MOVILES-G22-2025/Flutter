@@ -1,4 +1,3 @@
-// lib/common/widgets/search_bar.dart
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
@@ -49,22 +48,20 @@ class _SearchBarState extends State<SearchBar> {
         onChanged: widget.onChanged,
         decoration: InputDecoration(
           hintText: widget.hintText,
-          // Cuando se hace click (tiene foco), se llena de color; de lo contrario, es transparente
           filled: _isFocused,
           fillColor: _isFocused ? AppColors.primary30 : Colors.transparent,
           // Borde normal
           enabledBorder: OutlineInputBorder(
             borderSide: const BorderSide(color: Colors.grey),
-            borderRadius: BorderRadius.circular(50.0),
+            borderRadius: BorderRadius.circular(30.0),
           ),
-          // Borde cuando se hace click
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(
               color: AppColors
-                  .primary30, // Puedes cambiar este color según tu diseño
+                  .primary30,
               width: 2.0,
             ),
-            borderRadius: BorderRadius.circular(50.0),
+            borderRadius: BorderRadius.circular(100.0),
           ),
           // Icono de lupa a la derecha
           suffixIcon: const Icon(Icons.search),
