@@ -24,6 +24,17 @@ class _AddProductPageState extends State<AddProductPage> {
   final List<XFile?> _images = [];
 
   String? _selectedCategory;
+  bool _isFormValid = false;
+
+  void _validateForm() {
+    setState(() {
+      _isFormValid = _images.isNotEmpty &&
+          _nameController.text.isNotEmpty &&
+          _descriptionController.text.isNotEmpty &&
+          _selectedCategory != null &&
+          _priceController.text.isNotEmpty;
+    });
+  }
 
   Future<void> _pickImageFromCamera() async {
     if (_images.length >= 5) {
@@ -36,6 +47,7 @@ class _AddProductPageState extends State<AddProductPage> {
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
+        _validateForm();
       });
     }
   }
@@ -51,6 +63,7 @@ class _AddProductPageState extends State<AddProductPage> {
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
+        _validateForm();
       });
     }
   }
@@ -100,10 +113,17 @@ class _AddProductPageState extends State<AddProductPage> {
                 onPickImageFromGallery: _pickImageFromGallery,
                 image: _images,
               ),
-              CustomTextField(hintText: 'Name', controller: _nameController),
+              CustomTextField(
+                hintText: 'Name',
+                controller: _nameController,
+                onChanged: (_) => _validateForm(),
+              ),
               const SizedBox(height: 12),
               CustomTextField(
-                  hintText: 'Description', controller: _descriptionController),
+                hintText: 'Description',
+                controller: _descriptionController,
+                onChanged: (_) => _validateForm(),
+              ),
               const SizedBox(height: 12),
               CustomDropdown(
                 label: 'Category',
@@ -112,17 +132,23 @@ class _AddProductPageState extends State<AddProductPage> {
                 onChanged: (newValue) {
                   setState(() {
                     _selectedCategory = newValue;
+                    _validateForm();
                   });
                 },
               ),
               const SizedBox(height: 12),
-              CustomTextField(hintText: 'Price', controller: _priceController),
+              CustomTextField(
+                hintText: 'Price',
+                controller: _priceController,
+                onChanged: (_) => _validateForm(),
+              ),
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _images.isNotEmpty ? AppColors.primary30 : Colors.grey,
+                    backgroundColor: _isFormValid
+                        ? AppColors.primary30
+                        : AppColors.secondary40,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 60, vertical: 16),
                     textStyle: const TextStyle(
@@ -131,7 +157,19 @@ class _AddProductPageState extends State<AddProductPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  onPressed: _images.isNotEmpty ? () {} : null,
+                  onPressed: _isFormValid
+                      ? () {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/home',
+                            arguments: {
+                              "image": _images.first?.path,
+                              "name": _nameController.text,
+                              "price": _priceController.text,
+                            },
+                          );
+                        }
+                      : null,
                   child: const Text(
                     'Add',
                     style: TextStyle(

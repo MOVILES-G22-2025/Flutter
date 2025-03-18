@@ -4,10 +4,14 @@ import '../../constants.dart';
 class CustomTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
 
-  const CustomTextField(
-      {Key? key, required this.hintText, required this.controller})
-      : super(key: key);
+  const CustomTextField({
+    Key? key,
+    required this.hintText,
+    required this.controller,
+    this.onChanged,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +19,7 @@ class CustomTextField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
-        onChanged: (value) {},
+        onChanged: onChanged,
         style: const TextStyle(
           fontFamily: 'Cabin',
           fontSize: 16,
