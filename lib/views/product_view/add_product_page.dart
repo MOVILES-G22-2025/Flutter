@@ -46,9 +46,8 @@ class _AddProductPageState extends State<AddProductPage> {
       _showSnackBar("You can only upload up to 5 images");
       return;
     }
-
     final XFile? pickedImage =
-        await _picker.pickImage(source: ImageSource.camera);
+    await _picker.pickImage(source: ImageSource.camera);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -62,9 +61,8 @@ class _AddProductPageState extends State<AddProductPage> {
       _showSnackBar("You can only upload up to 5 images");
       return;
     }
-
     final XFile? pickedImage =
-        await _picker.pickImage(source: ImageSource.gallery);
+    await _picker.pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -83,12 +81,9 @@ class _AddProductPageState extends State<AddProductPage> {
     try {
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
       final ref =
-          FirebaseStorage.instance.ref().child('product_images/$fileName');
+      FirebaseStorage.instance.ref().child('product_images/$fileName');
       await ref.putFile(File(image.path));
-
-      //Get the URL of the uploaded image
-      String imageUrl = await ref.getDownloadURL();
-      return imageUrl;
+      return await ref.getDownloadURL();
     } catch (e) {
       print("Error uploading image: $e");
       return null;
@@ -97,26 +92,34 @@ class _AddProductPageState extends State<AddProductPage> {
 
   Future<void> _saveProduct() async {
     if (_isFormValid) {
-      String? imageUrl = await _uploadImageToFirebase(_images.first!);
+      // Itera sobre todas las imágenes y sube cada una
+      List<String> imageUrls = [];
+      for (var image in _images) {
+        if (image != null) {
+          String? url = await _uploadImageToFirebase(image);
+          if (url != null) {
+            imageUrls.add(url);
+          }
+        }
+      }
 
-      if (imageUrl != null) {
+      if (imageUrls.isNotEmpty) {
         final User? user = FirebaseAuth.instance.currentUser;
         final String? uid = user?.uid;
 
         if (uid != null) {
-          // Save product details in Firestore
           await FirebaseFirestore.instance.collection('products').add({
             'name': _nameController.text,
             'description': _descriptionController.text,
             'category': _selectedCategory,
             'price': _priceController.text,
-            'imageUrl': imageUrl,
+            'imageUrls': imageUrls,
             'timestamp': FieldValue.serverTimestamp(),
-            'userId': uid, //Associate product with the user
+            'userId': uid,
           });
-
-          Navigator.pop(context);
         }
+      } else {
+        _showSnackBar('Error uploading images');
       }
     } else {
       _showSnackBar('Please fill in all the fields');
@@ -148,86 +151,104 @@ class _AddProductPageState extends State<AddProductPage> {
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 20),
-              CustomImagePicker(
-                onPickImageFromCamera: _pickImageFromCamera,
-                onPickImageFromGallery: _pickImageFromGallery,
-                image: _images,
-              ),
-              CustomTextField(
-                hintText: 'Name',
-                controller: _nameController,
-                onChanged: (_) => _validateForm(),
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                hintText: 'Description',
-                controller: _descriptionController,
-                onChanged: (_) => _validateForm(),
-              ),
-              const SizedBox(height: 12),
-              CustomDropdown(
-                label: 'Category',
-                items: ProductClassification.categories,
-                selectedItem: _selectedCategory,
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                    _validateForm();
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                hintText: 'Price',
-                controller: _priceController,
-                onChanged: (_) => _validateForm(),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isFormValid
-                        ? AppColors.primary30
-                        : AppColors.secondary40,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 60, vertical: 16),
-                    textStyle: const TextStyle(
-                      fontFamily: 'Cabin',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints:
+            BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 20),
+                  CustomImagePicker(
+                    onPickImageFromCamera: _pickImageFromCamera,
+                    onPickImageFromGallery: _pickImageFromGallery,
+                    image: _images,
+                  ),
+                  CustomTextField(
+                    hintText: 'Name',
+                    controller: _nameController,
+                    onChanged: (_) => _validateForm(),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomTextField(
+                    hintText: 'Description',
+                    controller: _descriptionController,
+                    onChanged: (_) => _validateForm(),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomDropdown(
+                    label: 'Category',
+                    items: ProductClassification.categories,
+                    selectedItem: _selectedCategory,
+                    onChanged: (newValue) {
+                      setState(() {
+                        _selectedCategory = newValue;
+                        _validateForm();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  CustomTextField(
+                    hintText: 'Price',
+                    controller: _priceController,
+                    onChanged: (_) => _validateForm(),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isFormValid
+                          ? AppColors.primary30
+                          : AppColors.secondary40,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 60, vertical: 16),
+                      textStyle: const TextStyle(
+                        fontFamily: 'Cabin',
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: _isFormValid
+                        ? () async {
+                      // Muestra un diálogo de carga mientras se publica el producto.
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const AlertDialog(
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text(
+                                  "Publicando producto..."),
+                            ],
+                          ),
+                        ),
+                      );
+                      await _saveProduct();
+                      // Cierra el diálogo de carga y navega a '/home'
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      });
+                    }
+                        : null,
+                    child: const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontFamily: 'Cabin',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary50,
+                      ),
                     ),
                   ),
-                  onPressed: _isFormValid
-                      ? () async {
-                          await _saveProduct();
-                          Navigator.pushReplacementNamed(
-                            context,
-                            '/home',
-                          );
-                        }
-                      : null,
-                  child: const Text(
-                    'Add',
-                    style: TextStyle(
-                      fontFamily: 'Cabin',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary50,
-                    ),
-                  ),
-                ),
+                  const SizedBox(height: 20),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),
