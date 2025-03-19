@@ -10,7 +10,7 @@ import 'package:senemarket/views/product-detail_view/product-detail_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  //await Firebase.initializeApp();
+  await Firebase.initializeApp();
   runApp(senemarket());
 }
 
