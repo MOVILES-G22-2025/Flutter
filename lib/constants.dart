@@ -17,3 +17,15 @@ class AppColors {
   static const Color secondary60 = Color(0xFFECECEC);
   static const Color secondary70 = Color(0xFFF2F2F2);
 }
+
+class ProductClassification {
+  static const List<String> categories = [
+    "Academic materials",
+    "Technology and electronics",
+    "Transportation",
+    "Clothing and accessories",
+    "Housing",
+    "Entertainment",
+    "Sports and fitness"
+  ];
+}
