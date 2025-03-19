@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:senemarket/views/product_view/product_detail_page.dart'; // Asegúrate de que la ruta sea la correcta
+// Asegúrate de que la ruta sea la correcta
+import '../product-detail_view/product-detail_page.dart';
+
 
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -20,11 +22,11 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Dispara el callback para contar el click en la categoría.
-        if (onCategoryTap != null && category is String && category.isNotEmpty) {
-          onCategoryTap!(category);
+        // Si tienes un callback para la categoría, lo ejecutas
+        if (onCategoryTap != null && product['category'] != null && product['category'].isNotEmpty) {
+          onCategoryTap!(product['category']);
         }
-        // Navega a la pantalla de detalle del producto.
+        // Navegar a ProductDetailPage pasando el producto
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -32,7 +34,8 @@ class ProductCard extends StatelessWidget {
           ),
         );
       },
-      child: Card(
+
+    child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -42,19 +45,19 @@ class ProductCard extends StatelessWidget {
           children: [
             // Imagen
             Expanded(
+              // Ejemplo dentro de un ClipRRect
               child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(10),
-                  topRight: Radius.circular(10),
-                ),
-                child: product['image'] != null
-                    ? Image.file(
-                  File(product['image']),
-                  width: double.infinity,
-                  height: double.infinity,
+                borderRadius: BorderRadius.circular(30),
+                child: product['imageUrl'] != null
+                    ? Image.network(
+                  product['imageUrl'],
+                  width: 350,
+                  height: 350,
                   fit: BoxFit.cover,
                 )
                     : Container(
+                  width: 350,
+                  height: 350,
                   color: Colors.grey[300],
                   child: const Icon(
                     Icons.image,
@@ -63,6 +66,7 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
+
             ),
             // Texto
             Padding(

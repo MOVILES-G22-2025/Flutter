@@ -10,7 +10,7 @@ import 'package:senemarket/views/product-detail_view/product-detail_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  //await Firebase.initializeApp();
+  await Firebase.initializeApp();
   runApp(senemarket());
 }
 
@@ -26,7 +26,7 @@ class senemarket extends StatelessWidget {
         '/signUp': (context) => const SignUpPage(),
         '/home': (context) => HomePage(),
         '/add_product': (context) => const AddProductPage(),
-        '/productDetail' :(context) => const ProductDetailPage(),
+        //'/productDetail' :(context) => const ProductDetailPage(),
 
       },
     );
