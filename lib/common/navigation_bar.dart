@@ -16,13 +16,16 @@ class NavigationBarApp extends StatefulWidget {
 }
 
 class _NavigationBarAppState extends State<NavigationBarApp> {
-  // Mapa que asocia cada ícono outline a su versión filled.
   final Map<IconData, IconData> _filledIconMapping = {
     Icons.home_outlined: Icons.home,
     Icons.chat_bubble_outline_rounded: Icons.chat_bubble,
     Icons.favorite_border: Icons.favorite,
     Icons.person_outline: Icons.person,
   };
+
+  int _validateIndex(int index) {
+    return (index >= 0 && index < 5) ? index : 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,14 +52,44 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
           label: 'Profile',
         ),
       ],
-      currentIndex: widget.selectedIndex,
-      onTap: widget.onItemTapped,
+      currentIndex: _validateIndex(widget.selectedIndex),
+      onTap: (index) {
+        _navigateToPage(index, context);
+      },
       type: BottomNavigationBarType.fixed,
-      backgroundColor: AppColors.primary50,
-      selectedFontSize: 12,
-      unselectedFontSize: 12,
+      backgroundColor: AppColors.primary40,
       selectedItemColor: AppColors.primary0,
+      selectedLabelStyle: const TextStyle(
+        fontFamily: 'Cabin',
+        fontSize: 12,
+      ),
+      unselectedLabelStyle: const TextStyle(
+        fontFamily: 'Cabin',
+        fontSize: 12,
+      ),
     );
+  }
+
+  void _navigateToPage(int index, BuildContext context) {
+    if (index == widget.selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
   }
 
   Widget _buildIcon(IconData icon, int index) {
@@ -64,13 +97,11 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
     IconData displayIcon = isSelected && _filledIconMapping.containsKey(icon)
         ? _filledIconMapping[icon]!
         : icon;
-    Color iconColor = isSelected ? AppColors.primary20 : Colors.black;
+    Color iconColor = isSelected ? AppColors.primary30 : AppColors.primary0;
 
-    return Container(
-      child: Icon(
-        displayIcon,
-        color: iconColor,
-      ),
+    return Icon(
+      displayIcon,
+      color: iconColor,
     );
   }
 
@@ -78,7 +109,7 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
     bool isSelected = widget.selectedIndex == index;
 
     return AnimatedScale(
-      scale: isSelected ? 1.05 : 1.0, // Aumenta a 1.05 cuando se seleccione
+      scale: isSelected ? 1.05 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 14.0),
@@ -105,6 +136,7 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
             Text(
               label,
               style: const TextStyle(
+                fontFamily: 'Cabin',
                 color: AppColors.primary0,
                 fontSize: 12,
               ),
@@ -114,5 +146,4 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
       ),
     );
   }
-
 }
