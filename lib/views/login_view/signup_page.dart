@@ -160,8 +160,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     children: [
                       const Text(
                         'Already have an account? ',
-                        style:
-                            TextStyle(fontSize: 14, color: AppColors.primary0),
+                        style: TextStyle(
+                            fontFamily: 'Cabin',
+                            fontSize: 14,
+                            color: AppColors.primary0),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -174,6 +176,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         child: const Text(
                           'Sign In',
                           style: TextStyle(
+                            fontFamily: 'Cabin',
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary30,
@@ -199,6 +202,12 @@ class _SignUpPageState extends State<SignUpPage> {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        style: const TextStyle(
+          fontFamily: 'Cabin',
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.primary0,
+        ),
         keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         inputFormatters:
             isNumeric ? [FilteringTextInputFormatter.digitsOnly] : [],
