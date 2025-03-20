@@ -16,25 +16,44 @@ Future<void> setupFCM() async {
 
   // Solicita permisos (importante para iOS)
   NotificationSettings settings = await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
+      alert: true,
+      badge: true,
+      sound: true
   );
   print('User granted permission: ${settings.authorizationStatus}');
 
-  // Obtiene el token FCM
-  String? token = await messaging.getToken();
-  if (token != null) {
-    print("FCM Token: $token");
+  // Obtiene y actualiza el token por primera vez
+  await updateFCMToken();
 
-    // Si el usuario está autenticado, guarda el token en Firestore
+  // Escucha cambios en el token y lo actualiza en Firestore
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    updateFCMToken(newToken);
+  });
+}
+
+Future<void> updateFCMToken([String? newToken]) async {
+  print("Intentando obtener el token...");
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  String? token = newToken ?? await messaging.getToken();
+
+  if (token != null) {
+    print("FCM Token actualizado: $token");
+
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      print("Usuario autenticado: ${user.uid}");
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .update({'fcmToken': token});
+          .set({'fcmToken': token}, SetOptions(merge: true));
+
+      print("Token guardado en Firestore con éxito.");
+    } else {
+      print("⚠️ No hay usuario autenticado. No se guardó el token.");
     }
+  } else {
+    print("⚠️ No se pudo obtener el token de FCM.");
   }
 }
 
@@ -65,4 +84,5 @@ class SeneMarketApp extends StatelessWidget {
     );
   }
 }
+
 
