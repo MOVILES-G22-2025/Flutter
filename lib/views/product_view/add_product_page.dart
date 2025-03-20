@@ -47,7 +47,7 @@ class _AddProductPageState extends State<AddProductPage> {
       return;
     }
     final XFile? pickedImage =
-        await _picker.pickImage(source: ImageSource.camera);
+    await _picker.pickImage(source: ImageSource.camera);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -62,7 +62,7 @@ class _AddProductPageState extends State<AddProductPage> {
       return;
     }
     final XFile? pickedImage =
-        await _picker.pickImage(source: ImageSource.gallery);
+    await _picker.pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -81,7 +81,7 @@ class _AddProductPageState extends State<AddProductPage> {
     try {
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
       final ref =
-          FirebaseStorage.instance.ref().child('product_images/$fileName');
+      FirebaseStorage.instance.ref().child('product_images/$fileName');
       await ref.putFile(File(image.path));
       return await ref.getDownloadURL();
     } catch (e) {
@@ -104,18 +104,34 @@ class _AddProductPageState extends State<AddProductPage> {
       }
 
       if (imageUrls.isNotEmpty) {
+        // Elegimos la primera imagen como portada para Algolia
+        String imagePortada = imageUrls[0];
+
         final User? user = FirebaseAuth.instance.currentUser;
         final String? uid = user?.uid;
 
         if (uid != null) {
+          // Obtiene el nombre del vendedor desde la colección "users"
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
+          String sellerName = "Unknown Seller";
+          if (userDoc.exists) {
+            final data = userDoc.data();
+            sellerName = data?['name'] ?? sellerName;
+          }
+
           await FirebaseFirestore.instance.collection('products').add({
             'name': _nameController.text,
             'description': _descriptionController.text,
             'category': _selectedCategory,
             'price': _priceController.text,
             'imageUrls': imageUrls,
+            'imagePortada': imagePortada, // Guarda la imagen de portada
             'timestamp': FieldValue.serverTimestamp(),
             'userId': uid,
+            'sellerName': sellerName,
           });
         }
       } else {
@@ -155,7 +171,7 @@ class _AddProductPageState extends State<AddProductPage> {
         child: SingleChildScrollView(
           child: ConstrainedBox(
             constraints:
-                BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            BoxConstraints(minHeight: MediaQuery.of(context).size.height),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -212,35 +228,27 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                     onPressed: _isFormValid
                         ? () async {
-                            // Muestra un diálogo de carga mientras se publica el producto.
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) => const AlertDialog(
-                                backgroundColor: AppColors.primary50,
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircularProgressIndicator(),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      "Publishing product...",
-                                      style: TextStyle(
-                                        fontFamily: 'Cabin',
-                                        fontSize: 16,
-                                        color: AppColors.primary0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                            await _saveProduct();
-                            // Cierra el diálogo de carga y navega a '/home'
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            });
-                          }
+                      // Muestra un diálogo de carga mientras se publica el producto.
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const AlertDialog(
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text("Publicando producto..."),
+                            ],
+                          ),
+                        ),
+                      );
+                      await _saveProduct();
+                      // Cierra el diálogo de carga y navega a '/home'
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      });
+                    }
                         : null,
                     child: const Text(
                       'Add',

@@ -18,10 +18,7 @@ class ProductCard extends StatelessWidget {
     final category = product['category'] ?? '';
     final productName = product['name'] ?? "Sin nombre";
     final productPrice = product['price'] ?? "0.00";
-    final imageUrl =
-        (product['imageUrls'] is List && product['imageUrls'].isNotEmpty)
-            ? product['imageUrls'][0]
-            : null;
+    final imageUrl = product['imagePortada'] ?? Null;
 
     return GestureDetector(
       onTap: () {

@@ -10,9 +10,7 @@ class SearchBar extends StatefulWidget {
     Key? key,
     this.hintText = 'Search...',
     this.onChanged,
-    required TextStyle hintStyle,
-    required TextStyle textStyle,
-    required TextStyle style,
+
   }) : super(key: key);
 
   @override

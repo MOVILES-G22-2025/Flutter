@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:senemarket/common/navigation_bar.dart';
 import '../../constants.dart';
 
@@ -26,24 +25,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
   Future<String> _getSellerName() async {
-    final String sellerId = widget.product['userId'] ?? "";
-    if (sellerId.isEmpty) return "Unknown Seller";
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(sellerId)
-          .get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['name'] ?? "Unknown Seller";
-      } else {
-        return "Unknown Seller";
-      }
-    } catch (e) {
-      print("Error getting seller name: $e");
-      return "Unknown Seller";
-    }
+    return widget.product['sellerName'] ?? "Unknown Seller";
   }
+
 
   @override
   Widget build(BuildContext context) {

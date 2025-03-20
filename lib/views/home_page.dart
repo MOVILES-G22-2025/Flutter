@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Importa Provider
 import '../common/navigation_bar.dart';
 import 'package:senemarket/common/search_bar.dart' as searchBar;
 import '../common/filter_bar.dart';
+import '../models/product_search_model.dart';
 import '../views/product_view/product_card.dart';
 import '../constants.dart' as constants;
 
@@ -16,27 +18,22 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   List<Map<String, dynamic>> _addedProducts = [];
 
-  String _searchQuery = '';
-
   // Lista de categorías seleccionadas para filtrar.
   List<String> _selectedCategories = [];
 
   // Mapa para llevar la cuenta de los clics por categoría (para ordenarlas).
   Map<String, int> _categoryClicks = {};
 
-  final String userId = FirebaseAuth.instance.currentUser!
-      .uid /* Obtén el ID del usuario, por ejemplo, de FirebaseAuth.currentUser.uid */;
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
     super.initState();
     _loadUserClicks();
   }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     FirebaseFirestore.instance
         .collection('products')
         .orderBy('timestamp', descending: true)
@@ -53,8 +50,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadUserClicks() async {
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
     if (userDoc.exists) {
       final data = userDoc.data();
       setState(() {
@@ -69,23 +68,21 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Se llama cuando se hace clic en un producto.
-  /// Incrementa el contador de la categoría de ese producto.
+  /// Incrementa el contador de clics de una categoría y lo persiste.
   void _incrementCategoryClick(String category) async {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
-
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+    final userDoc =
+    FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
   }
 
-  /// lista de categorías ordenadas según la cantidad de clics (más altos primero).
+  /// Retorna las categorías ordenadas según la cantidad de clics.
   List<String> get _categoriesSortedByClicks {
     final allCategories = constants.ProductClassification.categories;
-
     final sortedList = allCategories.toList()
       ..sort((a, b) {
         final clicksA = _categoryClicks[a] ?? 0;
@@ -95,26 +92,28 @@ class _HomePageState extends State<HomePage> {
     return sortedList;
   }
 
+  /// Filtra los productos usando tanto el query de búsqueda (incluyendo resultados
+  /// de Algolia, si existen) como las categorías seleccionadas.
   List<Map<String, dynamic>> get _filteredProducts {
-    // Filtrado por búsqueda
-    final filteredBySearch = _searchQuery.isEmpty
-        ? _addedProducts
-        : _addedProducts.where((product) {
-            final name = product['name']?.toString().toLowerCase() ?? '';
-            return name.contains(_searchQuery.toLowerCase());
-          }).toList();
+    final productSearchModel = Provider.of<ProductSearchModel>(context);
+    final searchQuery = productSearchModel.searchQuery;
 
-    // Si no hay filtros, retorna todos los productos
+    // Si hay query y se obtuvieron resultados desde Algolia, se usan directamente
+    final List<Map<String, dynamic>> baseProducts =
+    (searchQuery.isNotEmpty && productSearchModel.searchResults.isNotEmpty)
+        ? productSearchModel.searchResults
+        : _addedProducts;
+
+    // Si no se han seleccionado categorías, retorna los productos base
     if (_selectedCategories.isEmpty) {
-      return filteredBySearch;
+      return baseProducts;
     }
 
-    // Filtrado por las categorías seleccionadas
-    return filteredBySearch.where((product) {
-      final productCategory =
-          product['category']?.toString().toLowerCase() ?? '';
-      return _selectedCategories
-          .any((selected) => productCategory.contains(selected.toLowerCase()));
+    // Si hay filtros de categoría, se filtran sobre la base
+    return baseProducts.where((product) {
+      final productCategory = product['category']?.toString().toLowerCase() ?? '';
+      return _selectedCategories.any(
+              (selected) => productCategory.contains(selected.toLowerCase()));
     }).toList();
   }
 
@@ -126,35 +125,20 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // SearchBar en la parte superior con padding
+            // SearchBar en la parte superior
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
-                hintText: 'Search for products...',
-                hintStyle: const TextStyle(
-                  fontFamily: 'Cabin',
-                  fontSize: 16,
-                  color: constants.AppColors.primary0,
-                ),
-                textStyle: const TextStyle(
-                  fontFamily: 'Cabin',
-                  fontSize: 18,
-                ),
-                style: const TextStyle(
-                  fontFamily: 'Cabin',
-                  fontSize: 16,
-                  fontWeight: FontWeight.normal,
-                  color: constants.AppColors.primary0,
-                ),
+                hintText: 'Search products...',
                 onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
+                  // Actualiza el query en ProductSearchModel
+                  Provider.of<ProductSearchModel>(context, listen: false)
+                      .updateSearchQuery(value);
                 },
               ),
             ),
             const SizedBox(height: 16.0),
-            // FilterBar justo debajo del SearchBar
+            // FilterBar debajo del SearchBar
             FilterBar(
               categories: _categoriesSortedByClicks,
               selectedCategories: _selectedCategories,
@@ -165,38 +149,38 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             const SizedBox(height: 16.0),
-            // Lista de productos
+            // Lista de productos filtrados
             Expanded(
               child: _filteredProducts.isEmpty
                   ? const Center(
-                      child: Text(
-                        "No products added yet",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    )
+                child: Text(
+                  "No products added yet",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+              )
                   : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.75,
-                      ),
-                      itemCount: _filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = _filteredProducts[index];
-                        return ProductCard(
-                          product: product,
-                          onCategoryTap: (category) {
-                            _incrementCategoryClick(category);
-                          },
-                        );
-                      },
-                    ),
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.75,
+                ),
+                itemCount: _filteredProducts.length,
+                itemBuilder: (context, index) {
+                  final product = _filteredProducts[index];
+                  return ProductCard(
+                    product: product,
+                    onCategoryTap: (category) {
+                      _incrementCategoryClick(category);
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
