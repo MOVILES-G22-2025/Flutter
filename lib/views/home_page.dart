@@ -139,6 +139,11 @@ class _HomePageState extends State<HomePage> {
                 textStyle: const TextStyle(
                   fontFamily: 'Cabin',
                   fontSize: 18,
+                ),
+                style: const TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
                   color: constants.AppColors.primary0,
                 ),
                 onChanged: (value) {

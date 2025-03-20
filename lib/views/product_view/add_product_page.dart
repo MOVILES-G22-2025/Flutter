@@ -217,12 +217,20 @@ class _AddProductPageState extends State<AddProductPage> {
                               context: context,
                               barrierDismissible: false,
                               builder: (context) => const AlertDialog(
+                                backgroundColor: AppColors.primary50,
                                 content: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     CircularProgressIndicator(),
                                     SizedBox(height: 16),
-                                    Text("Publicando producto..."),
+                                    Text(
+                                      "Publishing product...",
+                                      style: TextStyle(
+                                        fontFamily: 'Cabin',
+                                        fontSize: 16,
+                                        color: AppColors.primary0,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),

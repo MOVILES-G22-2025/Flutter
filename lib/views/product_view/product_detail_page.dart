@@ -166,55 +166,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con botones "Buy Now" y "Add to cart".
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 12, right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Buy Now".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary30,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        "Buy Now",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Add to cart".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary20,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        "Add to cart",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               // Contenedor con la información del vendedor.
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
