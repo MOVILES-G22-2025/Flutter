@@ -54,17 +54,7 @@ class AuthService {
     }
 
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      await _firestore.collection('logins').add({
-        'userId': userCredential.user!.uid,
-        'email': email,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
       return null;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {

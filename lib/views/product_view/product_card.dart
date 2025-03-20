@@ -18,11 +18,16 @@ class ProductCard extends StatelessWidget {
     final category = product['category'] ?? '';
     final productName = product['name'] ?? "Sin nombre";
     final productPrice = product['price'] ?? "0.00";
-    final imageUrl = product['imagePortada'] ?? Null;
+    final imageUrl =
+        (product['imageUrls'] is List && product['imageUrls'].isNotEmpty)
+            ? product['imageUrls'][0]
+            : null;
 
     return GestureDetector(
       onTap: () {
-        if (onCategoryTap != null && category is String && category.isNotEmpty) {
+        if (onCategoryTap != null &&
+            category is String &&
+            category.isNotEmpty) {
           onCategoryTap!(category);
         }
         // Navega a la pantalla de detalle del producto.
@@ -42,39 +47,38 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: imageUrl != null
                     ? CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.error,
-                      size: 50,
-                      color: Colors.red,
-                    ),
-                  ),
-                )
+                        imageUrl: imageUrl,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.error,
+                            size: 50,
+                            color: Colors.red,
+                          ),
+                        ),
+                      )
                     : Container(
-                  width: double.infinity,
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
+                        width: double.infinity,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
               ),
             ),
 
@@ -92,7 +96,6 @@ class ProductCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-
 
             // Precio en la parte inferior
             Padding(

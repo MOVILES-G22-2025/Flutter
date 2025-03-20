@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Importa Provider
 import '../common/navigation_bar.dart';
 import 'package:senemarket/common/search_bar.dart' as searchBar;
 import '../common/filter_bar.dart';
-import '../models/product_search_model.dart';
 import '../views/product_view/product_card.dart';
 import '../constants.dart' as constants;
 
@@ -18,13 +16,16 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   List<Map<String, dynamic>> _addedProducts = [];
 
+  String _searchQuery = '';
+
   // Lista de categorías seleccionadas para filtrar.
   List<String> _selectedCategories = [];
 
   // Mapa para llevar la cuenta de los clics por categoría (para ordenarlas).
   Map<String, int> _categoryClicks = {};
 
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
+  final String userId = FirebaseAuth.instance.currentUser!
+      .uid /* Obtén el ID del usuario, por ejemplo, de FirebaseAuth.currentUser.uid */;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
     FirebaseFirestore.instance
         .collection('products')
         .orderBy('timestamp', descending: true)
@@ -67,20 +69,23 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Incrementa el contador de clics de una categoría y lo persiste.
+  /// Se llama cuando se hace clic en un producto.
+  /// Incrementa el contador de la categoría de ese producto.
   void _incrementCategoryClick(String category) async {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
+
     final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
   }
 
-  /// Retorna las categorías ordenadas según la cantidad de clics.
+  /// lista de categorías ordenadas según la cantidad de clics (más altos primero).
   List<String> get _categoriesSortedByClicks {
-    const allCategories = constants.ProductClassification.categories;
+    final allCategories = constants.ProductClassification.categories;
+
     final sortedList = allCategories.toList()
       ..sort((a, b) {
         final clicksA = _categoryClicks[a] ?? 0;
@@ -90,23 +95,22 @@ class _HomePageState extends State<HomePage> {
     return sortedList;
   }
 
-  /// Filtra los productos usando tanto el query de búsqueda (incluyendo resultados
-  /// de Algolia, si existen) como las categorías seleccionadas.
   List<Map<String, dynamic>> get _filteredProducts {
-    final productSearchModel = Provider.of<ProductSearchModel>(context);
-    final searchQuery = productSearchModel.searchQuery;
+    // Filtrado por búsqueda
+    final filteredBySearch = _searchQuery.isEmpty
+        ? _addedProducts
+        : _addedProducts.where((product) {
+            final name = product['name']?.toString().toLowerCase() ?? '';
+            return name.contains(_searchQuery.toLowerCase());
+          }).toList();
 
-    // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
-    final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
-        ? productSearchModel.searchResults
-        : _addedProducts;
-
-    // Si hay filtros de categorías, se aplican sobre la lista base
+    // Si no hay filtros, retorna todos los productos
     if (_selectedCategories.isEmpty) {
-      return baseProducts;
+      return filteredBySearch;
     }
 
-    return baseProducts.where((product) {
+    // Filtrado por las categorías seleccionadas
+    return filteredBySearch.where((product) {
       final productCategory =
           product['category']?.toString().toLowerCase() ?? '';
       return _selectedCategories
@@ -122,7 +126,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // SearchBar en la parte superior
+            // SearchBar en la parte superior con padding
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
@@ -138,14 +142,14 @@ class _HomePageState extends State<HomePage> {
                   color: constants.AppColors.primary0,
                 ),
                 onChanged: (value) {
-                  // Actualiza el query en ProductSearchModel
-                  Provider.of<ProductSearchModel>(context, listen: false)
-                      .updateSearchQuery(value);
+                  setState(() {
+                    _searchQuery = value;
+                  });
                 },
               ),
             ),
             const SizedBox(height: 16.0),
-            // FilterBar debajo del SearchBar
+            // FilterBar justo debajo del SearchBar
             FilterBar(
               categories: _categoriesSortedByClicks,
               selectedCategories: _selectedCategories,
@@ -156,7 +160,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             const SizedBox(height: 16.0),
-            // Lista de productos filtrados
+            // Lista de productos
             Expanded(
               child: _filteredProducts.isEmpty
                   ? const Center(
