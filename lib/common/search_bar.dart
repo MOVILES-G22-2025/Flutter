@@ -8,8 +8,10 @@ class SearchBar extends StatefulWidget {
 
   const SearchBar({
     Key? key,
-    this.hintText = 'Buscar...',
+    this.hintText = 'Search...',
     this.onChanged,
+    required TextStyle hintStyle,
+    required TextStyle textStyle,
   }) : super(key: key);
 
   @override
@@ -49,16 +51,15 @@ class _SearchBarState extends State<SearchBar> {
         decoration: InputDecoration(
           hintText: widget.hintText,
           filled: _isFocused,
-          fillColor: _isFocused ? AppColors.primary30 : Colors.transparent,
+          fillColor: _isFocused ? AppColors.primary20 : Colors.transparent,
           // Borde normal
           enabledBorder: OutlineInputBorder(
             borderSide: const BorderSide(color: Colors.grey),
             borderRadius: BorderRadius.circular(30.0),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: AppColors
-                  .primary30,
+            borderSide: const BorderSide(
+              color: AppColors.primary20,
               width: 2.0,
             ),
             borderRadius: BorderRadius.circular(100.0),

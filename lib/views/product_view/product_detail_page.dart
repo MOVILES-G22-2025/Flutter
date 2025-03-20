@@ -48,85 +48,68 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     // Se asume que el campo 'imageUrls' es una lista de URLs.
-    final List<String> images = (widget.product['imageUrls'] as List<dynamic>?)
-        ?.cast<String>() ??
-        [];
+    final List<String> images =
+        (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
     return Scaffold(
+      backgroundColor: AppColors.primary50,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary50,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.primary0),
+        centerTitle: true,
+        title: Text(
+          widget.product['name'] ?? "Pathways 2B",
+          style: const TextStyle(
+            fontFamily: 'Cabin',
+            color: Colors.black,
+            fontSize: 30.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
       body: SingleChildScrollView(
-        child: Container(
-          margin: const EdgeInsets.only(top: 50, left: 20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // Fila con el botón de regresar y el título del producto.
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(60),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    widget.product['name'] ?? "Pathways 2B",
-                    style: const TextStyle(
-                      fontFamily: 'Cabin',
-                      color: Colors.black,
-                      fontSize: 30.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
               // Contenedor para mostrar las imágenes en un carrusel.
               Container(
-                padding:
-                const EdgeInsets.only(top: 8, right: 15, bottom: 5),
+                padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
                 height: 350, // Altura fija para el carrusel.
                 child: images.isNotEmpty
                     ? PageView.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index) {
-                    final imageUrl = images[index];
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(30),
-                      child: Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: 350,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  },
-                )
+                        itemCount: images.length,
+                        itemBuilder: (context, index) {
+                          final imageUrl = images[index];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.network(
+                              imageUrl,
+                              width: double.infinity,
+                              height: 350,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      )
                     : Container(
-                  width: 350,
-                  height: 350,
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
+                        width: 350,
+                        height: 350,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
               ),
-              // Contenedor con el precio y el botón de favoritos.
+              // Contenedor con el precio y el botón de favoritos
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -144,7 +127,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     IconButton(
                       icon: Icon(
-                        _isStarred ? Icons.star : Icons.star_border,
+                        _isStarred ? Icons.favorite : Icons.favorite_border,
                         color: Colors.black,
                         size: 40,
                       ),
@@ -183,55 +166,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con botones "Buy Now" y "Add to cart".
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 12, right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Buy Now".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary30,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        "Buy Now",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Add to cart".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary20,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        "Add to cart",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               // Contenedor con la información del vendedor.
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
@@ -243,7 +177,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Sold by:",
+                          "Sold by",
                           style: TextStyle(
                             fontFamily: 'Cabin',
                             fontSize: 20,
@@ -281,7 +215,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             }
                           },
                         ),
-
                       ],
                     ),
                     // Botón para "Talk with the seller".
@@ -297,10 +230,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       child: const Text(
-                        "Talk with the seller",
+                        'Talk with the seller',
                         style: TextStyle(
                           fontFamily: 'Cabin',
                           fontSize: 15,
+                          color: AppColors.primary0,
                         ),
                       ),
                     ),
@@ -315,12 +249,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Description: ",
+                      "Description ",
                       style: TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
                         fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
@@ -329,6 +263,60 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Contenedor con botones "Buy Now" y "Add to cart".
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        // Acción para "Buy Now".
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary30,
+                        foregroundColor: AppColors.secondary0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'Buy now',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary50,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Acción para "Add to cart".
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary30,
+                        foregroundColor: AppColors.secondary0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'Add to cart',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary50,
+                        ),
                       ),
                     ),
                   ],

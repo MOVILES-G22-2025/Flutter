@@ -51,10 +51,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadUserClicks() async {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
     if (userDoc.exists) {
       final data = userDoc.data();
       setState(() {
@@ -74,8 +72,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
-    final userDoc =
-    FirebaseFirestore.instance.collection('users').doc(userId);
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
@@ -83,7 +80,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Retorna las categorías ordenadas según la cantidad de clics.
   List<String> get _categoriesSortedByClicks {
-    final allCategories = constants.ProductClassification.categories;
+    const allCategories = constants.ProductClassification.categories;
     final sortedList = allCategories.toList()
       ..sort((a, b) {
         final clicksA = _categoryClicks[a] ?? 0;
@@ -95,26 +92,27 @@ class _HomePageState extends State<HomePage> {
 
   /// Filtra los productos usando tanto el query de búsqueda (incluyendo resultados
   /// de Algolia, si existen) como las categorías seleccionadas.
-List<Map<String, dynamic>> get _filteredProducts {
-  final productSearchModel = Provider.of<ProductSearchModel>(context);
-  final searchQuery = productSearchModel.searchQuery;
-  
-  // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
-  final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
-      ? productSearchModel.searchResults
-      : _addedProducts;
-  
-  // Si hay filtros de categorías, se aplican sobre la lista base
-  if (_selectedCategories.isEmpty) {
-    return baseProducts;
+  List<Map<String, dynamic>> get _filteredProducts {
+    final productSearchModel = Provider.of<ProductSearchModel>(context);
+    final searchQuery = productSearchModel.searchQuery;
+
+    // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
+    final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
+        ? productSearchModel.searchResults
+        : _addedProducts;
+
+    // Si hay filtros de categorías, se aplican sobre la lista base
+    if (_selectedCategories.isEmpty) {
+      return baseProducts;
+    }
+
+    return baseProducts.where((product) {
+      final productCategory =
+          product['category']?.toString().toLowerCase() ?? '';
+      return _selectedCategories
+          .any((selected) => productCategory.contains(selected.toLowerCase()));
+    }).toList();
   }
-  
-  return baseProducts.where((product) {
-    final productCategory = product['category']?.toString().toLowerCase() ?? '';
-    return _selectedCategories.any(
-        (selected) => productCategory.contains(selected.toLowerCase()));
-  }).toList();
-}
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +126,17 @@ List<Map<String, dynamic>> get _filteredProducts {
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
-                hintText: 'Buscar productos...',
+                hintText: 'Search for products...',
+                hintStyle: const TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 16,
+                  color: constants.AppColors.primary0,
+                ),
+                textStyle: const TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 18,
+                  color: constants.AppColors.primary0,
+                ),
                 onChanged: (value) {
                   // Actualiza el query en ProductSearchModel
                   Provider.of<ProductSearchModel>(context, listen: false)
@@ -152,34 +160,34 @@ List<Map<String, dynamic>> get _filteredProducts {
             Expanded(
               child: _filteredProducts.isEmpty
                   ? const Center(
-                child: Text(
-                  "No products added yet",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              )
+                      child: Text(
+                        "No products added yet",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
                   : GridView.builder(
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: _filteredProducts.length,
-                itemBuilder: (context, index) {
-                  final product = _filteredProducts[index];
-                  return ProductCard(
-                    product: product,
-                    onCategoryTap: (category) {
-                      _incrementCategoryClick(category);
-                    },
-                  );
-                },
-              ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: _filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _filteredProducts[index];
+                        return ProductCard(
+                          product: product,
+                          onCategoryTap: (category) {
+                            _incrementCategoryClick(category);
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),
