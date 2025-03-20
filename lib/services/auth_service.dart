@@ -1,14 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 class AuthService {
-  static Future<void> initializeFirebase() async {
-    await Firebase.initializeApp();
+  //Single static instance
+  static final AuthService _instance = AuthService._internal();
+
+  //Private constructor to prevent additional instances from being created
+  AuthService._internal();
+
+  factory AuthService() {
+    return _instance;
   }
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  //Get the current user
+  User? get currentUser => _auth.currentUser;
 
   //Register user
   Future<String?> signUpWithEmailAndPassword(String email, String password,
@@ -38,7 +46,7 @@ class AuthService {
     }
   }
 
-  //Sign in with unregistered user validation
+  //Sign in
   Future<String?> signInWithEmailAndPassword(
       String email, String password) async {
     if (!email.endsWith('@uniandes.edu.co')) {
