@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:senemarket/common/navigation_bar.dart';
 import '../../constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -16,12 +17,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
   // Función para actualizar el índice seleccionado de la barra de navegación.
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Agrega aquí cualquier lógica de navegación adicional.
+    // Aquí puedes agregar lógica de navegación adicional.
   }
 
   // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
@@ -42,6 +49,60 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     } catch (e) {
       print("Error getting seller name: $e");
       return "Unknown Seller";
+    }
+  }
+
+  /// Verifica si el producto ya está en favoritos para el usuario actual.
+  Future<void> _checkIfFavorited() async {
+    final String productId = widget.product['id'] ?? "";
+    if (productId.isEmpty) {
+      print("No product id provided in _checkIfFavorited");
+      return;
+    }
+    final String userId = FirebaseAuth.instance.currentUser!.uid;
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      final List<dynamic> favorites = userDoc.data()?['favorites'] ?? [];
+      setState(() {
+        _isStarred = favorites.contains(productId);
+      });
+    }
+  }
+
+  /// Función para alternar el estado de favorito.
+  Future<void> _toggleFavorite() async {
+    final String productId = widget.product['id'] ?? "";
+    if (productId.isEmpty) {
+      print("No product id provided");
+      return;
+    }
+    final String userId = FirebaseAuth.instance.currentUser!.uid;
+    final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+    final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+
+    try {
+      if (!_isStarred) {
+        // Agregar a favoritos usando arrayUnion
+        await productRef.update({
+          'favoritedBy': FieldValue.arrayUnion([userId]),
+        });
+        await userRef.update({
+          'favorites': FieldValue.arrayUnion([productId]),
+        });
+      } else {
+        // Quitar de favoritos usando arrayRemove
+        await productRef.update({
+          'favoritedBy': FieldValue.arrayRemove([userId]),
+        });
+        await userRef.update({
+          'favorites': FieldValue.arrayRemove([productId]),
+        });
+      }
+      setState(() {
+        _isStarred = !_isStarred;
+      });
+    } catch (e) {
+      print("Error updating favorites: $e");
     }
   }
 
@@ -83,7 +144,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    widget.product['name'] ?? "Pathways 2B",
+                    widget.product['name'] ?? "Producto sin nombre",
                     style: const TextStyle(
                       fontFamily: 'Cabin',
                       color: Colors.black,
@@ -95,8 +156,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               // Contenedor para mostrar las imágenes en un carrusel.
               Container(
-                padding:
-                const EdgeInsets.only(top: 8, right: 15, bottom: 5),
+                padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
                 height: 350, // Altura fija para el carrusel.
                 child: images.isNotEmpty
@@ -148,11 +208,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         color: Colors.black,
                         size: 40,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _isStarred = !_isStarred;
-                        });
-                      },
+                      onPressed: _toggleFavorite,
                     ),
                   ],
                 ),
@@ -281,7 +337,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             }
                           },
                         ),
-
                       ],
                     ),
                     // Botón para "Talk with the seller".
@@ -324,8 +379,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                     Text(
-                      widget.product['description'] ??
-                          "No description available",
+                      widget.product['description'] ?? "No description available",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 16,

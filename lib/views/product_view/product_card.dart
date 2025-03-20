@@ -29,9 +29,15 @@ class ProductCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(product: product),
+            builder: (context) => ProductDetailPage(
+              product: {
+                ...product, // 🔹 Mantiene todos los datos actuales
+                'id': product['id'], // 🔹 Se asegura de pasar el ID
+              },
+            ),
           ),
         );
+
       },
       child: Card(
         color: AppColors.primary50,

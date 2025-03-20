@@ -41,7 +41,9 @@ class _HomePageState extends State<HomePage> {
         .listen((querySnapshot) {
       List<Map<String, dynamic>> products = [];
       for (var doc in querySnapshot.docs) {
-        products.add(doc.data());
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        products.add(data);
       }
       setState(() {
         _addedProducts = products;
