@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUserClicks();
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -100,18 +101,16 @@ List<Map<String, dynamic>> get _filteredProducts {
   final productSearchModel = Provider.of<ProductSearchModel>(context);
   final searchQuery = productSearchModel.searchQuery;
   
-  // Si hay query y se obtuvieron resultados desde Algolia, se usan directamente
-  final List<Map<String, dynamic>> baseProducts =
-      (searchQuery.isNotEmpty && productSearchModel.searchResults.isNotEmpty)
-          ? productSearchModel.searchResults
-          : _addedProducts;
+  // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
+  final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
+      ? productSearchModel.searchResults
+      : _addedProducts;
   
-  // Si no se han seleccionado categorías, retorna los productos base
+  // Si hay filtros de categorías, se aplican sobre la lista base
   if (_selectedCategories.isEmpty) {
     return baseProducts;
   }
   
-  // Si hay filtros de categoría, se filtran sobre la base
   return baseProducts.where((product) {
     final productCategory = product['category']?.toString().toLowerCase() ?? '';
     return _selectedCategories.any(
