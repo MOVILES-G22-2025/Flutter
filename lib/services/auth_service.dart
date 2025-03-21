@@ -40,13 +40,20 @@ class AuthService {
         'semester': semester,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      //Registrar también como login
+      await _firestore.collection('logins').add({
+        'userId': userCredential.user!.uid,
+        'email': email,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message ?? 'Error registering user';
     }
   }
 
-  //Sign in
   Future<String?> signInWithEmailAndPassword(
       String email, String password) async {
     if (!email.endsWith('@uniandes.edu.co')) {
@@ -54,7 +61,19 @@ class AuthService {
     }
 
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      //Sign in
+      //Guardar registro de inicio de sesión en Firestore
+      await _firestore.collection('logins').add({
+        'userId': userCredential.user!.uid,
+        'email': email,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
       return null;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
