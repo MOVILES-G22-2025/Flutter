@@ -1,90 +1,119 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
-import 'package:senemarket/models/product_search_model.dart';
-import 'package:senemarket/views/home_page.dart';
-import 'package:senemarket/views/login_view/signin_page.dart';
-import 'package:senemarket/views/login_view/signup_page.dart';
-import 'package:senemarket/views/product_view/add_product_page.dart';
-import 'package:senemarket/views/login_view/login_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:senemarket/views/splash_screen.dart';
 
-Future<void> setupFCM() async {
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
+// ====== Data layer ======
+import 'package:senemarket/data/services/fcm_service.dart';
+import 'package:senemarket/data/repositories/auth_repository_impl.dart';
+import 'package:senemarket/data/repositories/product_repository_impl.dart';
+import 'package:senemarket/data/repositories/user_repository_impl.dart';
 
-  // Solicita permisos (importante para iOS)
-  NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true
-  );
-  print('User granted permission: ${settings.authorizationStatus}');
+// ====== Domain layer ======
+import 'package:senemarket/domain/repositories/auth_repository.dart';
+import 'package:senemarket/domain/repositories/product_repository.dart';
+import 'package:senemarket/domain/repositories/user_repository.dart';
 
-  // Obtiene y actualiza el token por primera vez
-  await updateFCMToken();
+// ====== ViewModels ======
+import 'package:senemarket/presentation/viewmodels/add_product_viewmodel.dart';
+import 'package:senemarket/presentation/viewmodels/product_search_viewmodel.dart';
+import 'package:senemarket/presentation/viewmodels/sign_in_viewmodel.dart';
+import 'package:senemarket/presentation/viewmodels/sign_up_viewmodel.dart';
 
-  // Escucha cambios en el token y lo actualiza en Firestore
-  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-    updateFCMToken(newToken);
-  });
-}
+// ====== Views ======
+import 'package:senemarket/presentation/views/splash_screen.dart';
+import 'package:senemarket/presentation/views/home_page.dart';
+import 'package:senemarket/presentation/views/login_view/login_page.dart';
+import 'package:senemarket/presentation/views/login_view/signin_page.dart';
+import 'package:senemarket/presentation/views/login_view/signup_page.dart';
+import 'package:senemarket/presentation/views/product_view/add_product_page.dart';
 
-Future<void> updateFCMToken([String? newToken]) async {
-  print("Intentando obtener el token...");
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
-  String? token = newToken ?? await messaging.getToken();
-
-  if (token != null) {
-    print("FCM Token actualizado: $token");
-
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      print("Usuario autenticado: ${user.uid}");
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({'fcmToken': token}, SetOptions(merge: true));
-
-      print("Token guardado en Firestore con éxito.");
-    } else {
-      print("⚠️ No hay usuario autenticado. No se guardó el token.");
-    }
-  } else {
-    print("⚠️ No se pudo obtener el token de FCM.");
-  }
-}
-
+// Opcional: constantes globales
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa Firebase
   await Firebase.initializeApp();
-  await setupFCM(); // Configura FCM antes de ejecutar la app
-  runApp(senemarket());
+
+  // Inicializa el servicio de notificaciones (FCM)
+  await FCMService.setupFCM();
+
+  runApp(const SenemarketApp());
 }
 
-class senemarket extends StatelessWidget {
+class SenemarketApp extends StatelessWidget {
+  const SenemarketApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<ProductSearchModel>(
-      create: (_) => ProductSearchModel(),
+    return MultiProvider(
+      providers: [
+        // Inyectamos repositorios concretos (data -> domain)
+        Provider<AuthRepository>(
+          create: (_) => AuthRepositoryImpl(),
+        ),
+        Provider<ProductRepository>(
+          create: (_) => ProductRepositoryImpl(),
+        ),
+        Provider<UserRepository>(
+          create: (_) => UserRepositoryImpl(),
+        ),
+
+        // Inyectamos los ViewModels (presentation)
+        ChangeNotifierProvider<ProductSearchViewModel>(
+          create: (context) => ProductSearchViewModel(
+            context.read<ProductRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider<SignInViewModel>(
+          create: (context) => SignInViewModel(
+            context.read<AuthRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider<SignUpViewModel>(
+          create: (context) => SignUpViewModel(
+            context.read<AuthRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider<AddProductViewModel>(
+          create: (context) => AddProductViewModel(
+            context.read<ProductRepository>(),
+          ),
+        ),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        initialRoute: '/splash',
-        routes: {
-          '/splash': (context) => const SplashScreen(),
-          '/login': (context) => const LoginPage(),
-          '/signIn': (context) => const SignInPage(),
-          '/signUp': (context) => const SignUpPage(),
-          '/home': (context) => HomePage(),
-          '/add_product': (context) => const AddProductPage(),
 
+        // Primera pantalla que se muestra
+        initialRoute: '/splash',
+
+        // Rutas nombradas
+        routes: {
+          // Pantalla de inicio (Splash)
+          '/splash': (context) => const SplashScreen(),
+
+          // Login principal (si lo usas como pantalla de bienvenida)
+          '/login': (context) => const LoginPage(),
+
+          // Pantalla de SignIn (logueo con email/password)
+          '/signIn': (context) => const SignInPage(),
+
+          // Pantalla de SignUp (registro de usuario)
+          '/signUp': (context) => const SignUpPage(),
+
+          // Pantalla principal (Home)
+          '/home': (context) => const HomePage(),
+
+          // Pantalla para agregar un producto
+          '/add_product': (context) => const AddProductPage(),
         },
+
+        // Ejemplo de navegación a la pantalla de detalles de producto
+        // si quisieras nombrar la ruta, podrías hacerlo con onGenerateRoute
+        // en lugar de `routes`, o directamente con Navigator.push(...)
       ),
     );
   }
 }
-

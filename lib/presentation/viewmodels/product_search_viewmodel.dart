@@ -1,28 +1,33 @@
+// lib/presentation/viewmodels/product_search_viewmodel.dart
 import 'package:flutter/material.dart';
-import '../services/product_search_repository.dart';
+import 'package:senemarket/domain/repositories/product_repository.dart';
 
-class ProductSearchModel extends ChangeNotifier {
-  final ProductSearchRepository _repository;
+class ProductSearchViewModel extends ChangeNotifier {
+  final ProductRepository _repository;
+
+  // Estado de la UI
   List<Map<String, dynamic>> _results = [];
   bool _isLoading = false;
   String _errorMessage = '';
   String _searchQuery = '';
 
-  ProductSearchModel({ProductSearchRepository? repository})
-      : _repository = repository ?? ProductSearchRepository();
+  // Constructor con inyección de dependencia
+  ProductSearchViewModel(this._repository);
 
-  // Nuevo getter para acceder a los resultados desde HomePage como searchResults
+  // Getters para exponer a la vista
   List<Map<String, dynamic>> get searchResults => _results;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
 
+  /// Actualiza el query y lanza la búsqueda.
   void updateSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
-    search(query); // Opcional: puedes llamar a la búsqueda inmediatamente o implementar un debounce.
+    search(query);
   }
 
+  /// Ejecuta la búsqueda a través del repositorio.
   Future<void> search(String query) async {
     _isLoading = true;
     _errorMessage = '';

@@ -1,10 +1,14 @@
+// lib/presentation/widgets/full_screen_image_page.dart
+
 import 'package:flutter/material.dart';
 
 class FullScreenImagePage extends StatelessWidget {
   final String imageUrl;
 
-  const FullScreenImagePage({Key? key, required this.imageUrl})
-      : super(key: key);
+  const FullScreenImagePage({
+    Key? key,
+    required this.imageUrl,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +23,10 @@ class FullScreenImagePage extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(imageUrl, fit: BoxFit.contain),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );

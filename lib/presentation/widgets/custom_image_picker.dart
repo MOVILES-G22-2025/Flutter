@@ -1,7 +1,8 @@
+// lib/presentation/widgets/custom_image_picker.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../constants.dart';
+import 'package:senemarket/constants.dart';
 
 class CustomImagePicker extends StatelessWidget {
   final Future<void> Function() onPickImageFromCamera;
@@ -9,11 +10,11 @@ class CustomImagePicker extends StatelessWidget {
   final List<XFile?> image;
 
   const CustomImagePicker({
-    super.key,
+    Key? key,
     required this.onPickImageFromCamera,
     required this.onPickImageFromGallery,
     required this.image,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,19 +25,14 @@ class CustomImagePicker extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: onPickImageFromCamera,
-              icon: const Icon(
-                Icons.camera_alt,
-                color: AppColors.primary0,
-              ),
+              icon: const Icon(Icons.camera_alt, color: AppColors.primary0),
               label: const Text(
                 "Take photo",
-                style:
-                    TextStyle(fontFamily: 'Cabin', color: AppColors.primary0),
+                style: TextStyle(fontFamily: 'Cabin', color: AppColors.primary0),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.primary0),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
             ),
             OutlinedButton.icon(
@@ -44,20 +40,18 @@ class CustomImagePicker extends StatelessWidget {
               icon: const Icon(Icons.file_upload, color: AppColors.primary0),
               label: const Text(
                 "Upload images",
-                style:
-                    TextStyle(fontFamily: 'Cabin', color: AppColors.primary0),
+                style: TextStyle(fontFamily: 'Cabin', color: AppColors.primary0),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.primary0),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
             ),
           ],
         ),
         const SizedBox(height: 20),
 
-        //Slide the selected images horizontally
+        // Muestra las imágenes seleccionadas
         if (image.isNotEmpty)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

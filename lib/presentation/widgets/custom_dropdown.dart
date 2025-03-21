@@ -1,24 +1,28 @@
+// lib/presentation/widgets/custom_dropdown.dart
 import 'package:flutter/material.dart';
-import '../../constants.dart';
+import 'package:senemarket/constants.dart';
 
-class CustomTextField extends StatelessWidget {
-  final String hintText;
-  final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
+class CustomDropdown extends StatelessWidget {
+  final String label;
+  final List<String> items;
+  final String? selectedItem;
+  final ValueChanged<String?> onChanged;
 
-  const CustomTextField({
+  const CustomDropdown({
     Key? key,
-    required this.hintText,
-    required this.controller,
-    this.onChanged,
+    required this.label,
+    required this.items,
+    required this.selectedItem,
+    required this.onChanged,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
+      child: DropdownButtonFormField<String>(
+        dropdownColor: AppColors.primary50,
+        value: selectedItem,
         onChanged: onChanged,
         style: const TextStyle(
           fontFamily: 'Cabin',
@@ -26,7 +30,12 @@ class CustomTextField extends StatelessWidget {
           color: AppColors.primary0,
         ),
         decoration: InputDecoration(
-          hintText: hintText,
+          labelText: label,
+          labelStyle: const TextStyle(
+            fontFamily: 'Cabin',
+            fontSize: 16,
+            color: AppColors.secondary30,
+          ),
           filled: true,
           fillColor: AppColors.secondary60,
           border: OutlineInputBorder(
@@ -50,9 +59,13 @@ class CustomTextField extends StatelessWidget {
               width: 2.0,
             ),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         ),
+        items: items.map<DropdownMenuItem<String>>((value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value),
+          );
+        }).toList(),
       ),
     );
   }

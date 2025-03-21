@@ -1,15 +1,28 @@
+// lib/data/repositories/product_repository_impl.dart
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:algolia/algolia.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:senemarket/domain/repositories/product_repository.dart';
 
-class ProductFacade {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+class ProductRepositoryImpl implements ProductRepository {
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _db;
+  final FirebaseStorage _storage;
+  static final Algolia _algolia = Algolia.init(
+    applicationId: 'AAJ6U9G25X',
+    apiKey: 'e1450d2b94d56f3a2bf7a7978f255be1',
+  );
+  ProductRepositoryImpl({
+    FirebaseAuth? auth,
+    FirebaseFirestore? db,
+    FirebaseStorage? storage,
+  })  : _auth = auth ?? FirebaseAuth.instance,
+        _db = db ?? FirebaseFirestore.instance,
+        _storage = storage ?? FirebaseStorage.instance;
 
-  // Sube una imagen a Firebase Storage y retorna la URL pública
   Future<String?> _uploadImageToFirebase(XFile image) async {
     try {
       final String fileName = DateTime.now().millisecondsSinceEpoch.toString();
@@ -22,7 +35,19 @@ class ProductFacade {
     }
   }
 
-  // CREA UN NUEVO PRODUCRO EN LA COLECCION "PRODUCTS"
+  @override
+  Future<List<Map<String, dynamic>>> searchProducts(String query) async {
+    final AlgoliaQuery algoliaQuery =
+    _algolia.instance.index('senemarket_products_index').query(query);
+    final AlgoliaQuerySnapshot snapshot = await algoliaQuery.getObjects();
+    return snapshot.hits.map((hit) {
+      final data = Map<String, dynamic>.from(hit.data);
+      data['id'] = hit.objectID;
+      return data;
+    }).toList();
+  }
+
+  @override
   Future<void> addProduct({
     required List<XFile?> images,
     required String name,
@@ -51,7 +76,7 @@ class ProductFacade {
       throw Exception("No hay ningún usuario logueado.");
     }
 
-    // 3. Obtener el nombre del usuario desde la colección "users"
+    // 3. Obtener nombre del usuario
     final userDoc = await _db.collection('users').doc(user.uid).get();
     String sellerName = "Unknown Seller";
     if (userDoc.exists) {
@@ -59,10 +84,10 @@ class ProductFacade {
       sellerName = data?['name'] ?? sellerName;
     }
 
-    // 4. Elegir la primera imagen como "portada"
+    // 4. Primera imagen como portada
     final String imagePortada = imageUrls[0];
 
-    // 5. Crear el documento en "products"
+    // 5. Crear documento en "products"
     await _db.collection('products').add({
       'name': name,
       'description': description,
@@ -77,7 +102,7 @@ class ProductFacade {
     });
   }
 
-  // DEVUELVE UN STREAM DE PRODUCTOS ORDENADOS POR TIMESTAMP
+  @override
   Stream<List<Map<String, dynamic>>> getProductsStream() {
     return _db
         .collection('products')
@@ -85,14 +110,14 @@ class ProductFacade {
         .snapshots()
         .map((querySnapshot) {
       return querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
     });
   }
 
-  // AGREGA EL ID DEL USUARIO AL ARRAY 'favoritedBy' DEL PRODUCTO
+  @override
   Future<void> addProductFavorite({
     required String userId,
     required String productId,
@@ -103,7 +128,7 @@ class ProductFacade {
     }, SetOptions(merge: true));
   }
 
-  // REMUEVE EL ID DEL USUARIO DEL ARRAY 'favoritedBy' DEL PRODUCTO
+  @override
   Future<void> removeProductFavorite({
     required String userId,
     required String productId,
@@ -114,4 +139,3 @@ class ProductFacade {
     }, SetOptions(merge: true));
   }
 }
-

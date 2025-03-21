@@ -1,11 +1,16 @@
+// lib/presentation/widgets/product_image_carousel.dart
+
 import 'package:flutter/material.dart';
-import 'package:senemarket/widgets/full_screen_image_page.dart';
+
+import 'full_screen_image_page.dart';
 
 class ProductImageCarousel extends StatefulWidget {
   final List<String> images;
 
-  const ProductImageCarousel({Key? key, required this.images})
-      : super(key: key);
+  const ProductImageCarousel({
+    Key? key,
+    required this.images,
+  }) : super(key: key);
 
   @override
   _ProductImageCarouselState createState() => _ProductImageCarouselState();
@@ -20,10 +25,10 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
     super.initState();
     _pageController = PageController(viewportFraction: 0.9);
     _pageController.addListener(() {
-      int next = _pageController.page!.round();
-      if (_currentPage != next) {
+      final nextPage = _pageController.page?.round() ?? 0;
+      if (_currentPage != nextPage) {
         setState(() {
-          _currentPage = next;
+          _currentPage = nextPage;
         });
       }
     });
@@ -46,16 +51,18 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final totalImages = widget.images.length;
+
     return Container(
       padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
       width: MediaQuery.of(context).size.width,
       height: 350,
-      child: widget.images.isNotEmpty
+      child: totalImages > 0
           ? Stack(
         children: [
           PageView.builder(
             controller: _pageController,
-            itemCount: widget.images.length,
+            itemCount: totalImages,
             itemBuilder: (context, index) {
               final imageUrl = widget.images[index];
               return GestureDetector(
@@ -96,14 +103,16 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
                   ),
                   onPressed: () {
                     _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeIn);
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeIn,
+                    );
                   },
                 ),
               ),
             ),
+
           // Flecha derecha (si no es la última página)
-          if (_currentPage < widget.images.length - 1)
+          if (_currentPage < totalImages - 1)
             Positioned(
               right: 5,
               top: 0,
@@ -123,8 +132,9 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
                   ),
                   onPressed: () {
                     _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeIn);
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeIn,
+                    );
                   },
                 ),
               ),
