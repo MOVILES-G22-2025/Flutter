@@ -1,4 +1,5 @@
 // lib/presentation/views/product_view/add_product_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,6 +30,7 @@ class _AddProductPageState extends State<AddProductPage> {
   String? _selectedCategory;
   bool _isFormValid = false;
 
+  // Valida que todos los campos estén llenos y haya al menos 1 imagen
   void _validateForm() {
     setState(() {
       _isFormValid = _images.isNotEmpty &&
@@ -78,6 +80,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
     if (_isFormValid) {
       try {
+        // Muestra diálogo de carga
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -93,22 +96,29 @@ class _AddProductPageState extends State<AddProductPage> {
           ),
         );
 
+        // Convertimos el texto del precio a double
+        final parsedPrice = double.tryParse(_priceController.text) ?? 0.0;
+
+        // Llamamos al ViewModel
         await addProductVM.addProduct(
           images: _images,
           name: _nameController.text,
           description: _descriptionController.text,
           category: _selectedCategory!,
-          price: _priceController.text,
+          price: parsedPrice,
         );
 
-        Navigator.pop(context); // cierra el AlertDialog
-        if (addProductVM.errorMessage != null) {
+        // Cerrar el diálogo
+        Navigator.pop(context);
+
+        // Validar si hubo error en el ViewModel
+        if (addProductVM.errorMessage != null && addProductVM.errorMessage!.isNotEmpty) {
           _showSnackBar(addProductVM.errorMessage!);
         } else {
           Navigator.pushReplacementNamed(context, '/home');
         }
       } catch (e) {
-        Navigator.pop(context); // cierra el AlertDialog
+        Navigator.pop(context); // cierra el diálogo
         _showSnackBar('Error al publicar el producto: $e');
       }
     } else {
@@ -120,7 +130,7 @@ class _AddProductPageState extends State<AddProductPage> {
     setState(() {
       _selectedIndex = index;
     });
-    // Maneja navegación en el bottom nav
+    // Maneja la navegación en el Bottom Nav
   }
 
   @override
@@ -148,7 +158,9 @@ class _AddProductPageState extends State<AddProductPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(

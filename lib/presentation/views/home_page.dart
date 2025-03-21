@@ -3,16 +3,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+// Widgets y barras
 import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/common/search_bar.dart' as searchBar;
 import 'package:senemarket/common/filter_bar.dart';
+
+// ViewModel para la búsqueda
 import 'package:senemarket/presentation/viewmodels/product_search_viewmodel.dart';
+
+// Tarjeta de producto que ahora espera un `Product`
 import 'package:senemarket/presentation/views/product_view/product_card.dart';
+
+// Constantes (categorías, colores, etc.)
 import 'package:senemarket/constants.dart' as constants;
 
-// Temporalmente, si aún no migras la lógica de getProductsStream
-// a un repositorio, puedes usar tu facade. Pero lo ideal es
-// usar ProductRepositoryImpl con un StreamBuilder.
+// Entidad de dominio
+import 'package:senemarket/domain/entities/product.dart';
+
+// Repositorio (aún lo instanciamos localmente,
+// aunque lo ideal es usar Provider para inyectarlo)
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 
 class HomePage extends StatefulWidget {
@@ -28,11 +38,14 @@ class _HomePageState extends State<HomePage> {
   // Categorías seleccionadas para filtrar
   List<String> _selectedCategories = [];
 
-  // Conteo de clics por categoría
+  // Mapa para conteo de clics por categoría
   Map<String, int> _categoryClicks = {};
 
   final String userId = FirebaseAuth.instance.currentUser!.uid;
-  final _productRepo = ProductRepositoryImpl(); // Idealmente via Provider
+
+  // Aquí instanciamos el ProductRepository.
+  // (Ideal: usar un Provider<ProductRepository> en main.dart)
+  final _productRepo = ProductRepositoryImpl();
 
   @override
   void initState() {
@@ -59,7 +72,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Incrementa el contador de clics de una categoría y lo persiste.
+  /// Incrementa y persiste el contador de clics de una categoría.
   void _incrementCategoryClick(String category) async {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
@@ -70,7 +83,7 @@ class _HomePageState extends State<HomePage> {
     }, SetOptions(merge: true));
   }
 
-  /// Ordena las categorías según los clics
+  /// Retorna las categorías ordenadas según la cantidad de clics.
   List<String> get _categoriesSortedByClicks {
     final allCategories = constants.ProductClassification.categories;
     final sortedList = allCategories.toList()
@@ -82,34 +95,35 @@ class _HomePageState extends State<HomePage> {
     return sortedList;
   }
 
-  /// Filtra los productos usando el query del ViewModel y las categorías
-  List<Map<String, dynamic>> _filterProducts(
-      List<Map<String, dynamic>> baseProducts,
+  /// Filtra los productos según el query del ViewModel y las categorías seleccionadas.
+  List<Product> _filterProducts(
+      List<Product> baseProducts,
       ProductSearchViewModel searchViewModel,
       ) {
     final searchQuery = searchViewModel.searchQuery;
 
-    // Por ahora, el searchViewModel.searchResults está vacío a menos
-    // que implementes Algolia en el viewModel.
-    // Si no hay query, tomamos baseProducts
-    final List<Map<String, dynamic>> products = searchQuery.isNotEmpty
+    // Si hay un query, usamos los resultados del ViewModel (Algolia); si no, baseProducts.
+    final List<Product> products = searchQuery.isNotEmpty
         ? searchViewModel.searchResults
         : baseProducts;
 
-    // Filtrar por categorías
+    // Si no hay categorías seleccionadas, devolvemos tal cual.
     if (_selectedCategories.isEmpty) {
       return products;
     }
 
+    // De lo contrario, filtramos por categoría
     return products.where((product) {
-      final productCategory = product['category']?.toString().toLowerCase() ?? '';
-      return _selectedCategories.any((selected) =>
-          productCategory.contains(selected.toLowerCase()));
+      final productCategory = product.category.toLowerCase();
+      return _selectedCategories.any(
+            (selected) => productCategory.contains(selected.toLowerCase()),
+      );
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Obtenemos el ProductSearchViewModel para el query
     final productSearchViewModel = context.watch<ProductSearchViewModel>();
 
     return Scaffold(
@@ -118,7 +132,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // SearchBar
+            // Barra de búsqueda
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
@@ -129,7 +143,8 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 16.0),
-            // FilterBar
+
+            // Barra de filtros
             FilterBar(
               categories: _categoriesSortedByClicks,
               selectedCategories: _selectedCategories,
@@ -140,9 +155,10 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             const SizedBox(height: 16.0),
-            // Stream de productos
+
+            // StreamBuilder con ProductRepository para mostrar los productos
             Expanded(
-              child: StreamBuilder<List<Map<String, dynamic>>>(
+              child: StreamBuilder<List<Product>>(
                 stream: _productRepo.getProductsStream(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -161,7 +177,10 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
 
+                  // Todos los productos provenientes de Firestore
                   final allProducts = snapshot.data!;
+
+                  // Aplicar el filtrado por query y categorías
                   final filteredProducts = _filterProducts(
                     allProducts,
                     productSearchViewModel,

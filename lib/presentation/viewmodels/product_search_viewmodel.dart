@@ -1,12 +1,14 @@
 // lib/presentation/viewmodels/product_search_viewmodel.dart
+
 import 'package:flutter/material.dart';
+import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 
 class ProductSearchViewModel extends ChangeNotifier {
   final ProductRepository _repository;
 
   // Estado de la UI
-  List<Map<String, dynamic>> _results = [];
+  List<Product> _results = [];
   bool _isLoading = false;
   String _errorMessage = '';
   String _searchQuery = '';
@@ -15,7 +17,7 @@ class ProductSearchViewModel extends ChangeNotifier {
   ProductSearchViewModel(this._repository);
 
   // Getters para exponer a la vista
-  List<Map<String, dynamic>> get searchResults => _results;
+  List<Product> get searchResults => _results;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
@@ -27,7 +29,8 @@ class ProductSearchViewModel extends ChangeNotifier {
     search(query);
   }
 
-  /// Ejecuta la búsqueda a través del repositorio.
+  /// Ejecuta la búsqueda a través del repositorio, guardando los resultados
+  /// como una lista de [Product] en lugar de Map.
   Future<void> search(String query) async {
     _isLoading = true;
     _errorMessage = '';

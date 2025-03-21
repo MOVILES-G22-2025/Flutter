@@ -1,16 +1,16 @@
-// lib/domain/repositories/product_repository.dart
 import 'package:image_picker/image_picker.dart';
 
+import '../entities/product.dart';
+
 abstract class ProductRepository {
+  Future<List<Product>> searchProducts(String query);
+
   Future<void> addProduct({
     required List<XFile?> images,
-    required String name,
-    required String description,
-    required String category,
-    required String price,
+    required Product product,
   });
 
-  Stream<List<Map<String, dynamic>>> getProductsStream();
+  Stream<List<Product>> getProductsStream();
 
   Future<void> addProductFavorite({
     required String userId,
@@ -21,7 +21,4 @@ abstract class ProductRepository {
     required String userId,
     required String productId,
   });
-
-  Future<List<Map<String, dynamic>>> searchProducts(String query);
-
 }

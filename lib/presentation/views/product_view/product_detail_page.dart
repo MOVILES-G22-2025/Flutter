@@ -1,4 +1,3 @@
-// lib/presentation/views/product_view/product_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,10 +5,11 @@ import 'package:senemarket/constants.dart';
 import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
+import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/widgets/product_image_carousel.dart';
 
 class ProductDetailPage extends StatefulWidget {
-  final Map<String, dynamic> product;
+  final Product product;
 
   const ProductDetailPage({Key? key, required this.product}) : super(key: key);
 
@@ -21,12 +21,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
-  // En un futuro, usa Provider para inyectar repos
-  // Pero aquí, para ejemplo rápido:
   final _productRepo = ProductRepositoryImpl();
   final _userRepo = UserRepositoryImpl();
 
-  String get productId => widget.product['id'] ?? '';
+  String get productId => widget.product.id;
 
   @override
   void initState() {
@@ -39,13 +37,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (userId == null || productId.isEmpty) return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       if (userDoc.exists) {
-        final data = userDoc.data() as Map<String, dynamic>;
-        List<dynamic> favorites = data['favorites'] ?? [];
+        final data = userDoc.data();
+        List<dynamic> favorites = data?['favorites'] ?? [];
         setState(() {
           _isStarred = favorites.contains(productId);
         });
@@ -80,14 +75,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  Future<String> _getSellerName() async {
-    return widget.product['sellerName'] ?? "Unknown Seller";
-  }
-
   @override
   Widget build(BuildContext context) {
-    final List<String> images =
-        (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
+    final List<String> images = widget.product.imageUrls;
 
     return Scaffold(
       backgroundColor: AppColors.primary50,
@@ -97,7 +87,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
         title: Text(
-          widget.product['name'] ?? "Sin Nombre",
+          widget.product.name.isNotEmpty ? widget.product.name : "Sin Nombre",
           style: const TextStyle(
             fontFamily: 'Cabin',
             color: Colors.black,
@@ -125,7 +115,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "\$ ${widget.product['price'] ?? "0"}",
+                    "\$ ${widget.product.price.toStringAsFixed(2)}",
                     style: const TextStyle(
                       fontFamily: 'Cabin',
                       color: Colors.black,
@@ -156,7 +146,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                 ),
                 Text(
-                  widget.product['category'] ?? "No category",
+                  widget.product.category,
                   style: const TextStyle(
                     fontFamily: 'Cabin',
                     color: Colors.black,
@@ -216,7 +206,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Nombre del vendedor
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -228,26 +217,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      FutureBuilder<String>(
-                        future: _getSellerName(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Text(
-                              "Loading...",
-                              style: TextStyle(fontFamily: 'Cabin', fontSize: 20),
-                            );
-                          } else if (snapshot.hasError) {
-                            return const Text(
-                              "Unknown Seller",
-                              style: TextStyle(fontFamily: 'Cabin', fontSize: 20),
-                            );
-                          } else {
-                            return Text(
-                              snapshot.data ?? "Unknown Seller",
-                              style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
-                            );
-                          }
-                        },
+                      Text(
+                        widget.product.sellerName,
+                        style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
                       ),
                     ],
                   ),
@@ -287,7 +259,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                   ),
                   Text(
-                    widget.product['description'] ?? "No description available",
+                    widget.product.description,
                     style: const TextStyle(
                       fontFamily: 'Cabin',
                       fontSize: 16,

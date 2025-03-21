@@ -1,11 +1,16 @@
 // lib/presentation/views/product_view/product_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:senemarket/constants.dart';
+import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/product_view/product_detail_page.dart';
 
+/// Tarjeta para mostrar un [Product].
+///
+/// [onCategoryTap] se invoca cuando el usuario hace tap
+/// en la tarjeta, pasando la categoría del producto.
 class ProductCard extends StatelessWidget {
-  final Map<String, dynamic> product;
+  final Product product;
   final ValueChanged<String>? onCategoryTap;
 
   const ProductCard({
@@ -16,19 +21,18 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = product['category'] ?? '';
-    final productName = product['name'] ?? "Sin nombre";
-    final productPrice = product['price'] ?? "0.00";
-    final imageUrl = product['imagePortada'];
+    final category = product.category;
+    final productName = product.name.isNotEmpty ? product.name : "Sin nombre";
+    final productPrice = product.price;
+    final imageUrl = product.imageUrls.isNotEmpty ? product.imageUrls.first : null;
 
     return GestureDetector(
       onTap: () {
-        if (onCategoryTap != null &&
-            category is String &&
-            category.isNotEmpty) {
+        // Si deseas incrementar la categoría al hacer tap
+        if (onCategoryTap != null && category.isNotEmpty) {
           onCategoryTap!(category);
         }
-        // Navega a la pantalla de detalle
+        // Navega a la pantalla de detalle del producto
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -37,7 +41,7 @@ class ProductCard extends StatelessWidget {
         );
       },
       child: Card(
-        color: AppColors.primary50,
+        color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -49,7 +53,7 @@ class ProductCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: imageUrl != null
+                child: (imageUrl != null)
                     ? CachedNetworkImage(
                   imageUrl: imageUrl,
                   width: double.infinity,
@@ -80,13 +84,13 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
+
             // Nombre
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 productName,
                 style: const TextStyle(
-                  fontFamily: 'Cabin',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -94,13 +98,13 @@ class ProductCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+
             // Precio
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                "\$ $productPrice",
+                "\$ ${productPrice.toStringAsFixed(2)}",
                 style: const TextStyle(
-                  fontFamily: 'Cabin',
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.green,
