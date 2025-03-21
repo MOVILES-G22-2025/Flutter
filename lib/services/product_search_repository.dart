@@ -8,15 +8,17 @@ class ProductSearchRepository {
   );
 
   Future<List<Map<String, dynamic>>> searchProducts(String query) async {
-    final AlgoliaQuery algoliaQuery = algolia.instance.index('products_senemarket_index').query(query);
+    final AlgoliaQuery algoliaQuery =
+    algolia.instance.index('products_senemarket_index').query(query);
     final AlgoliaQuerySnapshot snapshot = await algoliaQuery.getObjects();
     return snapshot.hits.map((hit) {
       final data = Map<String, dynamic>.from(hit.data);
-      data['id'] = hit.objectID; // Asigna el objectID de Algolia al campo 'id'
-
+      data['id'] = hit.objectID;
       return data;
     }).toList();
   }
+
+
 
 
 
