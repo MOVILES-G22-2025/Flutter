@@ -10,25 +10,39 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // Configura el AnimationController y la animación de fade
+    // Duración total de 3 segundos para combinar ambas animaciones
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
+
+    // Animación de escalado: de tamaño completo (1.0) a 0.6 para que el logo pase de 200 a ~120 (siendo 200 y 120, respectivamente)
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.6).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.66, curve: Curves.easeInOut),
+      ),
+    );
+
+    // Animación de deslizamiento: se mueve ligeramente hacia arriba en el último tercio de la animación.
+    // El valor de Offset(0, -0.2) es un ejemplo; ajústalo para que coincida exactamente con la posición del logo en el login.
+    _slideAnimation = Tween<Offset>(begin: Offset.zero, end: const Offset(0, -0.2)).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.66, 1.0, curve: Curves.easeInOut),
+      ),
     );
 
     _animationController.forward();
 
-    // Navega a la siguiente pantalla después de 3 segundos
+    // Al finalizar la animación (3 segundos) se navega a la pantalla de login.
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
@@ -43,14 +57,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ajusta el color de fondo si lo necesitas
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Center(
-          child: Image.asset(
-            'assets/images/senemarket-logo.png', // Asegúrate de tener el asset y declararlo en pubspec.yaml
-            width: 200,
-            height: 200,
+      backgroundColor: Colors.white,
+      body: Center(
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Hero(
+              tag: 'logoHero', // Tag común para la animación Hero
+              child: Image.asset(
+                'assets/images/senemarket-logo.png', // Asegúrate de que el asset esté declarado en pubspec.yaml
+                width: 200,
+                height: 200,
+              ),
+            ),
           ),
         ),
       ),

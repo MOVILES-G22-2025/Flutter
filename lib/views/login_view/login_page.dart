@@ -17,13 +17,15 @@ class LoginPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/senemarket-logo.png',
-                height: 120,
+              Hero(
+                tag: 'logoHero',
+                child: Image.asset(
+                  'assets/images/senemarket-logo.png',
+                  height: 120,
+                ),
               ),
               const SizedBox(height: 24),
-
-              //SeneMarket title
+              // SeneMarket title
               const Text(
                 'SeneMarket',
                 style: TextStyle(
@@ -34,7 +36,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
               const Text(
                 'Find everything you need for your career in one place',
                 textAlign: TextAlign.center,
@@ -44,7 +45,6 @@ class LoginPage extends StatelessWidget {
                     color: AppColors.primary0),
               ),
               const SizedBox(height: 40),
-
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
