@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
       List<Map<String, dynamic>> products = [];
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
+        data['id'] = doc.id; // Se asigna el ID del producto
         products.add(data);
       }
       setState(() {
@@ -97,26 +97,27 @@ class _HomePageState extends State<HomePage> {
 
   /// Filtra los productos usando tanto el query de búsqueda (incluyendo resultados
   /// de Algolia, si existen) como las categorías seleccionadas.
-List<Map<String, dynamic>> get _filteredProducts {
-  final productSearchModel = Provider.of<ProductSearchModel>(context);
-  final searchQuery = productSearchModel.searchQuery;
-  
-  // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
-  final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
-      ? productSearchModel.searchResults
-      : _addedProducts;
-  
-  // Si hay filtros de categorías, se aplican sobre la lista base
-  if (_selectedCategories.isEmpty) {
-    return baseProducts;
+  List<Map<String, dynamic>> get _filteredProducts {
+    final productSearchModel = Provider.of<ProductSearchModel>(context);
+    final searchQuery = productSearchModel.searchQuery;
+
+    // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
+    final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
+        ? productSearchModel.searchResults
+        : _addedProducts;
+
+    // Si hay filtros de categorías, se aplican sobre la lista base
+    if (_selectedCategories.isEmpty) {
+      return baseProducts;
+    }
+
+    return baseProducts.where((product) {
+      final productCategory =
+          product['category']?.toString().toLowerCase() ?? '';
+      return _selectedCategories.any(
+              (selected) => productCategory.contains(selected.toLowerCase()));
+    }).toList();
   }
-  
-  return baseProducts.where((product) {
-    final productCategory = product['category']?.toString().toLowerCase() ?? '';
-    return _selectedCategories.any(
-        (selected) => productCategory.contains(selected.toLowerCase()));
-  }).toList();
-}
 
   @override
   Widget build(BuildContext context) {

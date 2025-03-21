@@ -22,19 +22,16 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        if (onCategoryTap != null && category is String && category.isNotEmpty) {
+        if (onCategoryTap != null &&
+            category is String &&
+            category.isNotEmpty) {
           onCategoryTap!(category);
         }
         // Navega a la pantalla de detalle del producto.
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(
-              product: {
-                ...product, // 🔹 Mantiene todos los datos actuales
-                'id': product['id'], // 🔹 Se asegura de pasar el ID
-              },
-            ),
+            builder: (context) => ProductDetailPage(product: product),
           ),
         );
 

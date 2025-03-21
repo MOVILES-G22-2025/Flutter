@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:senemarket/common/navigation_bar.dart';
 import '../../constants.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -17,148 +17,137 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
+  // Obtiene el ID del producto (asegúrate de que 'id' exista en tu product)
+  String get productId => widget.product['ID'] ?? '';
+
+
+  // Actualiza el índice seleccionado de la barra de navegación.
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
+  Future<String> _getSellerName() async {
+    return widget.product['sellerName'] ?? "Unknown Seller";
+  }
+
+  // Consulta si el producto ya está en favotitos del usuario.
+  Future<void> _checkIfFavorited() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final productId = widget.product['id'] ?? "";
+    print("Checking favorites for productId: $productId, userId: $userId");
+
+    if (userId == null || productId.isEmpty) {
+      print("User not authenticated or productId empty.");
+      return;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        List<dynamic> favorites = data['favorites'] ?? [];
+        print("Favorites in user doc: $favorites");
+        setState(() {
+          _isStarred = favorites.contains(productId);
+          print("Favorite status set to: $_isStarred");
+        });
+      }
+    } catch (e) {
+      print("Error checking favorites: $e");
+    }
+  }
+
+
+  // - Añade/Elimina el producto y el usuario
+  Future<void> _toggleFavorite() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final productId = widget.product['id'] ?? "";
+
+
+    if (userId == null || productId.isEmpty) {
+      print("User not authenticated or productId empty.");
+      return;
+    }
+
+    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId);
+    final productDocRef = FirebaseFirestore.instance.collection('products').doc(productId);
+
+    // Cambia el estado local para actualizar la UI.
+    setState(() {
+      _isStarred = !_isStarred;
+    });
+
+    try {
+      if (_isStarred) {
+        await userDocRef.set({
+          'favorites': FieldValue.arrayUnion([productId])
+        }, SetOptions(merge: true));
+
+        await productDocRef.set({
+          'favoritedBy': FieldValue.arrayUnion([userId])
+        }, SetOptions(merge: true));
+      } else {
+        await userDocRef.set({
+          'favorites': FieldValue.arrayRemove([productId])
+        }, SetOptions(merge: true));
+
+        await productDocRef.set({
+          'favoritedBy': FieldValue.arrayRemove([userId])
+        }, SetOptions(merge: true));
+      }
+      print("Favorites updated successfully.");
+    } catch (e) {
+      print("Error updating favorite: $e");
+    }
+  }
+
+
   @override
   void initState() {
     super.initState();
     _checkIfFavorited();
   }
 
-  // Función para actualizar el índice seleccionado de la barra de navegación.
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Aquí puedes agregar lógica de navegación adicional.
-  }
-
-  // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
-  Future<String> _getSellerName() async {
-    final String sellerId = widget.product['userId'] ?? "";
-    if (sellerId.isEmpty) return "Unknown Seller";
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(sellerId)
-          .get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['name'] ?? "Unknown Seller";
-      } else {
-        return "Unknown Seller";
-      }
-    } catch (e) {
-      print("Error getting seller name: $e");
-      return "Unknown Seller";
-    }
-  }
-
-  /// Verifica si el producto ya está en favoritos para el usuario actual.
-  Future<void> _checkIfFavorited() async {
-    final String productId = widget.product['id'] ?? "";
-    if (productId.isEmpty) {
-      print("No product id provided in _checkIfFavorited");
-      return;
-    }
-    final String userId = FirebaseAuth.instance.currentUser!.uid;
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    if (userDoc.exists) {
-      final List<dynamic> favorites = userDoc.data()?['favorites'] ?? [];
-      setState(() {
-        _isStarred = favorites.contains(productId);
-      });
-    }
-  }
-
-  /// Función para alternar el estado de favorito.
-  Future<void> _toggleFavorite() async {
-    final String productId = widget.product['id'] ?? "";
-    if (productId.isEmpty) {
-      print("No product id provided");
-      return;
-    }
-    final String userId = FirebaseAuth.instance.currentUser!.uid;
-    final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
-    final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
-
-    try {
-      if (!_isStarred) {
-        // Agregar a favoritos usando arrayUnion
-        await productRef.update({
-          'favoritedBy': FieldValue.arrayUnion([userId]),
-        });
-        await userRef.update({
-          'favorites': FieldValue.arrayUnion([productId]),
-        });
-      } else {
-        // Quitar de favoritos usando arrayRemove
-        await productRef.update({
-          'favoritedBy': FieldValue.arrayRemove([userId]),
-        });
-        await userRef.update({
-          'favorites': FieldValue.arrayRemove([productId]),
-        });
-      }
-      setState(() {
-        _isStarred = !_isStarred;
-      });
-    } catch (e) {
-      print("Error updating favorites: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Se asume que el campo 'imageUrls' es una lista de URLs.
-    final List<String> images = (widget.product['imageUrls'] as List<dynamic>?)
-        ?.cast<String>() ??
-        [];
+    // Lista de imágenes del producto
+    final List<String> images =
+        (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
     return Scaffold(
+      backgroundColor: AppColors.primary50,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary50,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.primary0),
+        centerTitle: true,
+        title: Text(
+          widget.product['name'] ?? "Sin Nombre",
+          style: const TextStyle(
+            fontFamily: 'Cabin',
+            color: Colors.black,
+            fontSize: 30.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
       body: SingleChildScrollView(
-        child: Container(
-          margin: const EdgeInsets.only(top: 50, left: 20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // Fila con el botón de regresar y el título del producto.
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(60),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    widget.product['name'] ?? "Producto sin nombre",
-                    style: const TextStyle(
-                      fontFamily: 'Cabin',
-                      color: Colors.black,
-                      fontSize: 30.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              // Contenedor para mostrar las imágenes en un carrusel.
+              // Carrusel de imágenes
               Container(
                 padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
-                height: 350, // Altura fija para el carrusel.
+                height: 350,
                 child: images.isNotEmpty
                     ? PageView.builder(
                   itemCount: images.length,
@@ -186,7 +175,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                 ),
               ),
-              // Contenedor con el precio y el botón de favoritos.
+              // Contenedor con precio y botón de favoritos
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -194,7 +183,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "\$ ${widget.product['price'] ?? "80.000"}",
+                      "\$ ${widget.product['price'] ?? "0"}",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
@@ -205,6 +194,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     IconButton(
                       icon: Icon(
                         _isStarred ? Icons.star : Icons.star_border,
+
                         color: Colors.black,
                         size: 40,
                       ),
@@ -213,7 +203,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con la categoría del producto.
+              // Categoría
               Container(
                 width: MediaQuery.of(context).size.width,
                 child: Row(
@@ -228,7 +218,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                     Text(
-                      widget.product['category'] ?? "Book",
+                      widget.product['category'] ?? "No category",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
@@ -239,16 +229,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con botones "Buy Now" y "Add to cart".
+
+              // Botones "Buy Now" y "Add to cart"
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 12, right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        // Acción para "Buy Now".
+                        // Acción para "Buy Now"
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary30,
@@ -258,17 +249,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       child: const Text(
-                        "Buy Now",
+                        'Buy now',
                         style: TextStyle(
                           fontFamily: 'Cabin',
-                          fontSize: 22,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: () {
-                        // Acción para "Add to cart".
+                        // Acción para "Add to cart"
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary20,
@@ -278,39 +270,41 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       child: const Text(
-                        "Add to cart",
+                        'Add to cart',
                         style: TextStyle(
                           fontFamily: 'Cabin',
-                          fontSize: 22,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Contenedor con la información del vendedor.
+
+              // Info del vendedor
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Columna con la información del vendedor.
+                    // Nombre del vendedor
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Sold by:",
+                          "Sold by",
                           style: TextStyle(
                             fontFamily: 'Cabin',
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+
                           ),
                         ),
                         FutureBuilder<String>(
                           future: _getSellerName(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Text(
                                 "Loading...",
                                 style: TextStyle(
@@ -339,10 +333,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ],
                     ),
-                    // Botón para "Talk with the seller".
+                    // Botón para hablar con el vendedor
                     ElevatedButton(
                       onPressed: () {
-                        // Acción para "Talk with the seller".
+                        // Acción para "Talk with the seller"
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary20,
@@ -352,17 +346,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       child: const Text(
-                        "Talk with the seller",
+                        'Talk with the seller',
                         style: TextStyle(
                           fontFamily: 'Cabin',
                           fontSize: 15,
+                          color: AppColors.primary0,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Contenedor con la descripción del producto.
+              // Descripción
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -370,12 +365,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Description: ",
+                      "Description ",
                       style: TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
                         fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
@@ -388,6 +383,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
+
             ],
           ),
         ),
