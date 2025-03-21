@@ -1,4 +1,3 @@
-// lib/services/product_facade.dart
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,7 +9,7 @@ class ProductFacade {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Sube una imagen a Firebase Storage y retorna la URL pública
+  // Sube una imagen a Firebase Storage y retorna la URL pública
   Future<String?> _uploadImageToFirebase(XFile image) async {
     try {
       final String fileName = DateTime.now().millisecondsSinceEpoch.toString();
@@ -23,7 +22,7 @@ class ProductFacade {
     }
   }
 
-  /// Crea un nuevo producto en la colección "products"
+  // CREA UN NUEVO PRODUCRO EN LA COLECCION "PRODUCTS"
   Future<void> addProduct({
     required List<XFile?> images,
     required String name,
@@ -43,7 +42,6 @@ class ProductFacade {
     }
 
     if (imageUrls.isEmpty) {
-      // Puedes lanzar una excepción para manejar el error en la UI
       throw Exception("No se pudo subir ninguna imagen.");
     }
 
@@ -79,6 +77,7 @@ class ProductFacade {
     });
   }
 
+  // DEVUELVE UN STREAM DE PRODUCTOS ORDENADOS POR TIMESTAMP
   Stream<List<Map<String, dynamic>>> getProductsStream() {
     return _db
         .collection('products')
@@ -93,36 +92,26 @@ class ProductFacade {
     });
   }
 
-  /// Añade o quita el producto de favoritos, actualizando
-  /// tanto el documento del usuario como el del producto.
-  Future<void> toggleFavorite({
+  // AGREGA EL ID DEL USUARIO AL ARRAY 'favoritedBy' DEL PRODUCTO
+  Future<void> addProductFavorite({
     required String userId,
     required String productId,
-    required bool addFavorite,
   }) async {
-    final userDocRef = _db.collection('users').doc(userId);
     final productDocRef = _db.collection('products').doc(productId);
-
-    if (addFavorite) {
-      await userDocRef.set({
-        'favorites': FieldValue.arrayUnion([productId])
-      }, SetOptions(merge: true));
-
-      await productDocRef.set({
-        'favoritedBy': FieldValue.arrayUnion([userId])
-      }, SetOptions(merge: true));
-    } else {
-      await userDocRef.set({
-        'favorites': FieldValue.arrayRemove([productId])
-      }, SetOptions(merge: true));
-
-      await productDocRef.set({
-        'favoritedBy': FieldValue.arrayRemove([userId])
-      }, SetOptions(merge: true));
-    }
+    await productDocRef.set({
+      'favoritedBy': FieldValue.arrayUnion([userId])
+    }, SetOptions(merge: true));
   }
 
-
-
+  // REMUEVE EL ID DEL USUARIO DEL ARRAY 'favoritedBy' DEL PRODUCTO
+  Future<void> removeProductFavorite({
+    required String userId,
+    required String productId,
+  }) async {
+    final productDocRef = _db.collection('products').doc(productId);
+    await productDocRef.set({
+      'favoritedBy': FieldValue.arrayRemove([userId])
+    }, SetOptions(merge: true));
+  }
 }
 
