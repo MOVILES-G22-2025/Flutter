@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUserClicks();
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -41,7 +42,9 @@ class _HomePageState extends State<HomePage> {
         .listen((querySnapshot) {
       List<Map<String, dynamic>> products = [];
       for (var doc in querySnapshot.docs) {
-        products.add(doc.data());
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Se asigna el ID del producto
+        products.add(data);
       }
       setState(() {
         _addedProducts = products;
@@ -98,20 +101,23 @@ class _HomePageState extends State<HomePage> {
     final productSearchModel = Provider.of<ProductSearchModel>(context);
     final searchQuery = productSearchModel.searchQuery;
 
-    // Si hay query y se obtuvieron resultados desde Algolia, se usan directamente
-    final List<Map<String, dynamic>> baseProducts =
-    (searchQuery.isNotEmpty && productSearchModel.searchResults.isNotEmpty)
+
+    // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
+    final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
         ? productSearchModel.searchResults
         : _addedProducts;
 
-    // Si no se han seleccionado categorías, retorna los productos base
+    // Si hay filtros de categorías, se aplican sobre la lista base
+
     if (_selectedCategories.isEmpty) {
       return baseProducts;
     }
 
-    // Si hay filtros de categoría, se filtran sobre la base
     return baseProducts.where((product) {
-      final productCategory = product['category']?.toString().toLowerCase() ?? '';
+      final productCategory =
+          product['category']?.toString().toLowerCase() ?? '';
+
+
       return _selectedCategories.any(
               (selected) => productCategory.contains(selected.toLowerCase()));
     }).toList();

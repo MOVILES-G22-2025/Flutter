@@ -34,6 +34,7 @@ class ProductCard extends StatelessWidget {
             builder: (context) => ProductDetailPage(product: product),
           ),
         );
+
       },
       child: Card(
         color: AppColors.primary50,

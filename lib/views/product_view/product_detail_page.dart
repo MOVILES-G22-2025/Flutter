@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:senemarket/common/navigation_bar.dart';
 import '../../constants.dart';
 
@@ -15,12 +17,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
-  // Función para actualizar el índice seleccionado de la barra de navegación.
+  // Obtiene el ID del producto (asegúrate de que 'id' exista en tu product)
+  String get productId => widget.product['ID'] ?? '';
+
+
+  // Actualiza el índice seleccionado de la barra de navegación.
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Agrega aquí cualquier lógica de navegación adicional.
   }
 
   // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
@@ -28,10 +33,88 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     return widget.product['sellerName'] ?? "Unknown Seller";
   }
 
+  // Consulta si el producto ya está en favotitos del usuario.
+  Future<void> _checkIfFavorited() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final productId = widget.product['id'] ?? "";
+    print("Checking favorites for productId: $productId, userId: $userId");
+
+    if (userId == null || productId.isEmpty) {
+      print("User not authenticated or productId empty.");
+      return;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        List<dynamic> favorites = data['favorites'] ?? [];
+        print("Favorites in user doc: $favorites");
+        setState(() {
+          _isStarred = favorites.contains(productId);
+          print("Favorite status set to: $_isStarred");
+        });
+      }
+    } catch (e) {
+      print("Error checking favorites: $e");
+    }
+  }
+
+
+  // - Añade/Elimina el producto y el usuario
+  Future<void> _toggleFavorite() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final productId = widget.product['id'] ?? "";
+
+
+    if (userId == null || productId.isEmpty) {
+      print("User not authenticated or productId empty.");
+      return;
+    }
+
+    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId);
+    final productDocRef = FirebaseFirestore.instance.collection('products').doc(productId);
+
+    // Cambia el estado local para actualizar la UI.
+    setState(() {
+      _isStarred = !_isStarred;
+    });
+
+    try {
+      if (_isStarred) {
+        await userDocRef.set({
+          'favorites': FieldValue.arrayUnion([productId])
+        }, SetOptions(merge: true));
+
+        await productDocRef.set({
+          'favoritedBy': FieldValue.arrayUnion([userId])
+        }, SetOptions(merge: true));
+      } else {
+        await userDocRef.set({
+          'favorites': FieldValue.arrayRemove([productId])
+        }, SetOptions(merge: true));
+
+        await productDocRef.set({
+          'favoritedBy': FieldValue.arrayRemove([userId])
+        }, SetOptions(merge: true));
+      }
+      print("Favorites updated successfully.");
+    } catch (e) {
+      print("Error updating favorite: $e");
+    }
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Se asume que el campo 'imageUrls' es una lista de URLs.
+    // Lista de imágenes del producto
+
     final List<String> images =
         (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
@@ -43,7 +126,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
         title: Text(
-          widget.product['name'] ?? "Pathways 2B",
+          widget.product['name'] ?? "Sin Nombre",
+
           style: const TextStyle(
             fontFamily: 'Cabin',
             color: Colors.black,
@@ -61,11 +145,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // Contenedor para mostrar las imágenes en un carrusel.
+
+              // Carrusel de imágenes
+
               Container(
                 padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
-                height: 350, // Altura fija para el carrusel.
+                height: 350,
                 child: images.isNotEmpty
                     ? PageView.builder(
                         itemCount: images.length,
@@ -93,7 +179,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
               ),
-              // Contenedor con el precio y el botón de favoritos
+
+              // Contenedor con precio y botón de favoritos
+
+
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -101,7 +190,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "\$ ${widget.product['price'] ?? "80.000"}",
+                      "\$ ${widget.product['price'] ?? "0"}",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
@@ -111,20 +200,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     IconButton(
                       icon: Icon(
-                        _isStarred ? Icons.favorite : Icons.favorite_border,
+
+                        _isStarred ? Icons.star : Icons.star_border,
+
+
                         color: Colors.black,
                         size: 40,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _isStarred = !_isStarred;
-                        });
-                      },
+                      onPressed: _toggleFavorite,
                     ),
                   ],
                 ),
               ),
-              // Contenedor con la categoría del producto.
+              // Categoría
               Container(
                 width: MediaQuery.of(context).size.width,
                 child: Row(
@@ -139,7 +227,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                     Text(
-                      widget.product['category'] ?? "Book",
+                      widget.product['category'] ?? "No category",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         color: Colors.black,
@@ -150,13 +238,68 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con la información del vendedor.
+
+
+              // Botones "Buy Now" y "Add to cart"
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        // Acción para "Buy Now"
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary30,
+                        foregroundColor: AppColors.secondary0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'Buy now',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Acción para "Add to cart"
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary20,
+                        foregroundColor: AppColors.secondary0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'Add to cart',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Info del vendedor
+
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Columna con la información del vendedor.
+                    // Nombre del vendedor
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -166,13 +309,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             fontFamily: 'Cabin',
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+
                           ),
                         ),
                         FutureBuilder<String>(
                           future: _getSellerName(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Text(
                                 "Loading...",
                                 style: TextStyle(
@@ -201,10 +344,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ],
                     ),
-                    // Botón para "Talk with the seller".
+                    // Botón para hablar con el vendedor
                     ElevatedButton(
                       onPressed: () {
-                        // Acción para "Talk with the seller".
+                        // Acción para "Talk with the seller"
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary20,
@@ -225,7 +368,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Contenedor con la descripción del producto.
+              // Descripción
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -242,65 +385,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                     Text(
-                      widget.product['description'] ??
-                          "No description available",
+                      widget.product['description'] ?? "No description available",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Contenedor con botones "Buy Now" y "Add to cart".
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Buy Now".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary30,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        'Buy now',
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary50,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Add to cart".
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary30,
-                        foregroundColor: AppColors.secondary0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text(
-                        'Add to cart',
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary50,
-                        ),
                       ),
                     ),
                   ],
