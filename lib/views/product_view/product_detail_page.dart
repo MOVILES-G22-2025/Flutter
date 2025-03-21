@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:senemarket/common/navigation_bar.dart';
-import '../../constants.dart';
+import 'package:senemarket/constants.dart';
+import 'package:senemarket/services/product_facade.dart';
+import 'package:senemarket/services/user_facade.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -17,9 +19,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
-  // Obtiene el ID del producto (asegúrate de que 'id' exista en tu product)
-  String get productId => widget.product['ID'] ?? '';
+  // Se asume que en el documento el id se guarda en 'id'
+  String get productId => widget.product['id'] ?? '';
 
+  // Instancias de las fachadas correspondientes
+  final ProductFacade _productFacade = ProductFacade();
+  final UserFacade _userFacade = UserFacade();
 
   // Actualiza el índice seleccionado de la barra de navegación.
   void _onItemTapped(int index) {
@@ -28,31 +33,26 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     });
   }
 
-  // Función que consulta Firestore para obtener el nombre del vendedor a partir de su id.
+  // Obtiene el nombre del vendedor a partir del dato del producto.
   Future<String> _getSellerName() async {
     return widget.product['sellerName'] ?? "Unknown Seller";
   }
 
-  // Consulta si el producto ya está en favotitos del usuario.
+  // Consulta si el producto ya está en favoritos del usuario.
   Future<void> _checkIfFavorited() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    final productId = widget.product['id'] ?? "";
-    print("Checking favorites for productId: $productId, userId: $userId");
-
-    if (userId == null || productId.isEmpty) {
-      print("User not authenticated or productId empty.");
-      return;
-    }
+    if (userId == null || productId.isEmpty) return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
         List<dynamic> favorites = data['favorites'] ?? [];
-        print("Favorites in user doc: $favorites");
         setState(() {
           _isStarred = favorites.contains(productId);
-          print("Favorite status set to: $_isStarred");
         });
       }
     } catch (e) {
@@ -60,20 +60,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-
-  // - Añade/Elimina el producto y el usuario
+  // Alterna el estado de favorito coordinando ambas fachadas.
   Future<void> _toggleFavorite() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    final productId = widget.product['id'] ?? "";
-
-
     if (userId == null || productId.isEmpty) {
       print("User not authenticated or productId empty.");
       return;
     }
-
-    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId);
-    final productDocRef = FirebaseFirestore.instance.collection('products').doc(productId);
 
     // Cambia el estado local para actualizar la UI.
     setState(() {
@@ -82,28 +75,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     try {
       if (_isStarred) {
-        await userDocRef.set({
-          'favorites': FieldValue.arrayUnion([productId])
-        }, SetOptions(merge: true));
-
-        await productDocRef.set({
-          'favoritedBy': FieldValue.arrayUnion([userId])
-        }, SetOptions(merge: true));
+        // Agrega el producto a favoritos en el documento del usuario...
+        await _userFacade.addFavorite(productId);
+        // ...y agrega el usuario al array 'favoritedBy' del producto.
+        await _productFacade.addProductFavorite(userId: userId, productId: productId);
       } else {
-        await userDocRef.set({
-          'favorites': FieldValue.arrayRemove([productId])
-        }, SetOptions(merge: true));
-
-        await productDocRef.set({
-          'favoritedBy': FieldValue.arrayRemove([userId])
-        }, SetOptions(merge: true));
+        await _userFacade.removeFavorite(productId);
+        await _productFacade.removeProductFavorite(userId: userId, productId: productId);
       }
       print("Favorites updated successfully.");
     } catch (e) {
       print("Error updating favorite: $e");
     }
   }
-
 
   @override
   void initState() {
@@ -113,8 +97,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Lista de imágenes del producto
-
+    // Lista de imágenes del producto.
     final List<String> images =
         (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
@@ -127,7 +110,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         centerTitle: true,
         title: Text(
           widget.product['name'] ?? "Sin Nombre",
-
           style: const TextStyle(
             fontFamily: 'Cabin',
             color: Colors.black,
@@ -145,44 +127,39 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-
-              // Carrusel de imágenes
-
+              // Carrusel de imágenes.
               Container(
                 padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
                 height: 350,
                 child: images.isNotEmpty
                     ? PageView.builder(
-                        itemCount: images.length,
-                        itemBuilder: (context, index) {
-                          final imageUrl = images[index];
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(30),
-                            child: Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              height: 350,
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        width: 350,
+                  itemCount: images.length,
+                  itemBuilder: (context, index) {
+                    final imageUrl = images[index];
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Image.network(
+                        imageUrl,
+                        width: double.infinity,
                         height: 350,
-                        color: Colors.grey[300],
-                        child: const Icon(
-                          Icons.image,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
+                        fit: BoxFit.cover,
                       ),
+                    );
+                  },
+                )
+                    : Container(
+                  width: 350,
+                  height: 350,
+                  color: Colors.grey[300],
+                  child: const Icon(
+                    Icons.image,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                ),
               ),
-
-              // Contenedor con precio y botón de favoritos
-
-
+              // Contenedor con precio y botón de favoritos.
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -200,10 +177,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     IconButton(
                       icon: Icon(
-
                         _isStarred ? Icons.star : Icons.star_border,
-
-
                         color: Colors.black,
                         size: 40,
                       ),
@@ -212,7 +186,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Categoría
+              // Categoría.
               Container(
                 width: MediaQuery.of(context).size.width,
                 child: Row(
@@ -238,9 +212,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-
-
-              // Botones "Buy Now" y "Add to cart"
+              // Botones "Buy Now" y "Add to cart".
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
@@ -291,15 +263,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-
-              // Info del vendedor
-
+              // Información del vendedor.
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Nombre del vendedor
+                    // Nombre del vendedor.
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -309,7 +279,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             fontFamily: 'Cabin',
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-
                           ),
                         ),
                         FutureBuilder<String>(
@@ -344,7 +313,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ],
                     ),
-                    // Botón para hablar con el vendedor
+                    // Botón para hablar con el vendedor.
                     ElevatedButton(
                       onPressed: () {
                         // Acción para "Talk with the seller"
@@ -368,7 +337,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-              // Descripción
+              // Descripción.
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -401,3 +370,4 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 }
+

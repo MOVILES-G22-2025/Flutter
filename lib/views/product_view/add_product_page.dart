@@ -1,15 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../common/navigation_bar.dart';
 import '../../constants.dart';
 import 'custom_dropdown.dart';
 import 'custom_image.dart';
 import 'custom_textfield.dart';
+import '../../services/product_facade.dart';
 
 class AddProductPage extends StatefulWidget {
   const AddProductPage({super.key});
@@ -46,8 +43,7 @@ class _AddProductPageState extends State<AddProductPage> {
       _showSnackBar("You can only upload up to 5 images");
       return;
     }
-    final XFile? pickedImage =
-    await _picker.pickImage(source: ImageSource.camera);
+    final XFile? pickedImage = await _picker.pickImage(source: ImageSource.camera);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -61,8 +57,7 @@ class _AddProductPageState extends State<AddProductPage> {
       _showSnackBar("You can only upload up to 5 images");
       return;
     }
-    final XFile? pickedImage =
-    await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedImage = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
       setState(() {
         _images.add(pickedImage);
@@ -77,70 +72,42 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-  Future<String?> _uploadImageToFirebase(XFile image) async {
-    try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      final ref =
-      FirebaseStorage.instance.ref().child('product_images/$fileName');
-      await ref.putFile(File(image.path));
-      return await ref.getDownloadURL();
-    } catch (e) {
-      print("Error uploading image: $e");
-      return null;
-    }
-  }
-
+  //LOGICA PARA GUARDAR PRODUCTOS EN FACADE
   Future<void> _saveProduct() async {
     if (_isFormValid) {
-      // Itera sobre todas las imágenes y sube cada una
-      List<String> imageUrls = [];
-      for (var image in _images) {
-        if (image != null) {
-          String? url = await _uploadImageToFirebase(image);
-          if (url != null) {
-            imageUrls.add(url);
-          }
-        }
-      }
+      try {
+        // Muestra un diálogo de carga
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Publicando producto..."),
+              ],
+            ),
+          ),
+        );
 
-      if (imageUrls.isNotEmpty) {
-        // Elegimos la primera imagen como portada para Algolia
-        String imagePortada = imageUrls[0];
+        // Llamada al Facade
+        await ProductFacade().addProduct(
+          images: _images,
+          name: _nameController.text,
+          description: _descriptionController.text,
+          category: _selectedCategory!,
+          price: _priceController.text,
+        );
 
-        final User? user = FirebaseAuth.instance.currentUser;
-        final String? uid = user?.uid;
-
-        if (uid != null) {
-          // Obtiene el nombre del vendedor desde la colección "users"
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .get();
-          String sellerName = "Unknown Seller";
-          if (userDoc.exists) {
-            final data = userDoc.data();
-            sellerName = data?['name'] ?? sellerName;
-          }
-
-
-          // Se crea el producto y se inicializa 'favoritedBy' como un array vacío
-
-          await FirebaseFirestore.instance.collection('products').add({
-            'name': _nameController.text,
-            'description': _descriptionController.text,
-            'category': _selectedCategory,
-            'price': _priceController.text,
-            'imageUrls': imageUrls,
-            'imagePortada': imagePortada,
-            'timestamp': FieldValue.serverTimestamp(),
-            'userId': uid,
-            'sellerName': sellerName,
-            'favoritedBy': [], // Inicializado como lista vacía
-
-          });
-        }
-      } else {
-        _showSnackBar('Error uploading images');
+        // Cierra el diálogo y navega a '/home'
+        Navigator.pop(context); // cierra el AlertDialog
+        Navigator.pushReplacementNamed(context, '/home');
+      } catch (e) {
+        // Manejo de errores
+        Navigator.pop(context); // cierra el AlertDialog
+        _showSnackBar('Error al publicar el producto: $e');
       }
     } else {
       _showSnackBar('Please fill in all the fields');
@@ -175,8 +142,7 @@ class _AddProductPageState extends State<AddProductPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints:
-            BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -223,38 +189,14 @@ class _AddProductPageState extends State<AddProductPage> {
                       backgroundColor: _isFormValid
                           ? AppColors.primary30
                           : AppColors.secondary40,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 60, vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
                       textStyle: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: _isFormValid
-                        ? () async {
-                      // Muestra un diálogo de carga mientras se publica el producto.
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => const AlertDialog(
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text("Publicando producto..."),
-                            ],
-                          ),
-                        ),
-                      );
-                      await _saveProduct();
-                      // Cierra el diálogo de carga y navega a '/home'
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        Navigator.pushReplacementNamed(context, '/home');
-                      });
-                    }
-                        : null,
+                    onPressed: _isFormValid ? _saveProduct : null,
                     child: const Text(
                       'Add',
                       style: TextStyle(
