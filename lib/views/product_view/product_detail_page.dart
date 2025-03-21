@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/constants.dart';
+import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/services/product_facade.dart';
 import 'package:senemarket/services/user_facade.dart';
+import 'package:senemarket/widgets/product_image_carousel.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -19,26 +20,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
   int _selectedIndex = 0;
 
-  // Se asume que en el documento el id se guarda en 'id'
-  String get productId => widget.product['id'] ?? '';
-
-  // Instancias de las fachadas correspondientes
   final ProductFacade _productFacade = ProductFacade();
   final UserFacade _userFacade = UserFacade();
 
-  // Actualiza el índice seleccionado de la barra de navegación.
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  String get productId => widget.product['id'] ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
   }
 
-  // Obtiene el nombre del vendedor a partir del dato del producto.
-  Future<String> _getSellerName() async {
-    return widget.product['sellerName'] ?? "Unknown Seller";
-  }
-
-  // Consulta si el producto ya está en favoritos del usuario.
   Future<void> _checkIfFavorited() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) return;
@@ -60,7 +52,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  // Alterna el estado de favorito coordinando ambas fachadas.
   Future<void> _toggleFavorite() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) {
@@ -68,16 +59,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       return;
     }
 
-    // Cambia el estado local para actualizar la UI.
     setState(() {
       _isStarred = !_isStarred;
     });
 
     try {
       if (_isStarred) {
-        // Agrega el producto a favoritos en el documento del usuario...
         await _userFacade.addFavorite(productId);
-        // ...y agrega el usuario al array 'favoritedBy' del producto.
         await _productFacade.addProductFavorite(userId: userId, productId: productId);
       } else {
         await _userFacade.removeFavorite(productId);
@@ -89,15 +77,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _checkIfFavorited();
+  Future<String> _getSellerName() async {
+    return widget.product['sellerName'] ?? "Unknown Seller";
   }
 
   @override
   Widget build(BuildContext context) {
-    // Lista de imágenes del producto.
+    // Se extraen las imágenes del documento del producto.
     final List<String> images =
         (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
@@ -120,49 +106,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
+        onItemTapped: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // Carrusel de imágenes.
-              Container(
-                padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
-                width: MediaQuery.of(context).size.width,
-                height: 350,
-                child: images.isNotEmpty
-                    ? PageView.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index) {
-                    final imageUrl = images[index];
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(30),
-                      child: Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: 350,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  },
-                )
-                    : Container(
-                  width: 350,
-                  height: 350,
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              // Contenedor con precio y botón de favoritos.
-              Container(
+              // Widget del carrusel de imágenes
+              ProductImageCarousel(images: images),
+              // Precio y botón de favorito.
+              Padding(
                 padding: const EdgeInsets.only(right: 10),
-                width: MediaQuery.of(context).size.width,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -187,42 +146,36 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               // Categoría.
-              Container(
-                width: MediaQuery.of(context).size.width,
-                child: Row(
-                  children: [
-                    const Text(
-                      "Category: ",
-                      style: TextStyle(
-                        fontFamily: 'Cabin',
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                      ),
+              Row(
+                children: [
+                  const Text(
+                    "Category: ",
+                    style: TextStyle(
+                      fontFamily: 'Cabin',
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
                     ),
-                    Text(
-                      widget.product['category'] ?? "No category",
-                      style: const TextStyle(
-                        fontFamily: 'Cabin',
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  Text(
+                    widget.product['category'] ?? "No category",
+                    style: const TextStyle(
+                      fontFamily: 'Cabin',
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Botones "Buy Now" y "Add to cart".
-              Container(
-                width: double.infinity,
+              // Botones Buy now y Add to cart.
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Buy Now"
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary30,
                         foregroundColor: AppColors.secondary0,
@@ -241,9 +194,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     const SizedBox(height: 10),
                     ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Add to cart"
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary20,
                         foregroundColor: AppColors.secondary0,
@@ -264,7 +215,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               // Información del vendedor.
-              Container(
+              Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -313,11 +264,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ],
                     ),
-                    // Botón para hablar con el vendedor.
+                    // Botón para "Talk with the seller".
                     ElevatedButton(
-                      onPressed: () {
-                        // Acción para "Talk with the seller"
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary20,
                         foregroundColor: AppColors.secondary0,
@@ -338,9 +287,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               // Descripción.
-              Container(
+              Padding(
                 padding: const EdgeInsets.only(right: 10),
-                width: MediaQuery.of(context).size.width,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -354,7 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                     Text(
-                      widget.product['description'] ?? "No description available",
+                      widget.product['description'] ??
+                          "No description available",
                       style: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 16,
@@ -370,4 +319,3 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 }
-
