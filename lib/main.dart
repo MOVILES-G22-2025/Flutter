@@ -10,6 +10,7 @@ import 'package:senemarket/views/product_view/add_product_page.dart';
 import 'package:senemarket/views/login_view/login_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:senemarket/views/splash_screen.dart';
 
 Future<void> setupFCM() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -62,18 +63,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await setupFCM(); // Configura FCM antes de ejecutar la app
-  runApp(SeneMarketApp());
+  runApp(senemarket());
 }
 
-class SeneMarketApp extends StatelessWidget {
+class senemarket extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<ProductSearchModel>(
       create: (_) => ProductSearchModel(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        initialRoute: '/login',
+        initialRoute: '/splash',
         routes: {
+          '/splash': (context) => const SplashScreen(),
           '/login': (context) => const LoginPage(),
           '/signIn': (context) => const SignInPage(),
           '/signUp': (context) => const SignUpPage(),
