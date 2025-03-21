@@ -101,12 +101,14 @@ class _HomePageState extends State<HomePage> {
     final productSearchModel = Provider.of<ProductSearchModel>(context);
     final searchQuery = productSearchModel.searchQuery;
 
+
     // Si hay búsqueda, usamos los resultados de Algolia (aunque sean vacíos)
     final List<Map<String, dynamic>> baseProducts = searchQuery.isNotEmpty
         ? productSearchModel.searchResults
         : _addedProducts;
 
     // Si hay filtros de categorías, se aplican sobre la lista base
+
     if (_selectedCategories.isEmpty) {
       return baseProducts;
     }
@@ -114,6 +116,8 @@ class _HomePageState extends State<HomePage> {
     return baseProducts.where((product) {
       final productCategory =
           product['category']?.toString().toLowerCase() ?? '';
+
+
       return _selectedCategories.any(
               (selected) => productCategory.contains(selected.toLowerCase()));
     }).toList();
@@ -131,7 +135,7 @@ class _HomePageState extends State<HomePage> {
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
-                hintText: 'Buscar productos...',
+                hintText: 'Search products...',
                 onChanged: (value) {
                   // Actualiza el query en ProductSearchModel
                   Provider.of<ProductSearchModel>(context, listen: false)

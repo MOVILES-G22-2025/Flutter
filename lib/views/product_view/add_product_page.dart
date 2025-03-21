@@ -122,7 +122,9 @@ class _AddProductPageState extends State<AddProductPage> {
             sellerName = data?['name'] ?? sellerName;
           }
 
+
           // Se crea el producto y se inicializa 'favoritedBy' como un array vacío
+
           await FirebaseFirestore.instance.collection('products').add({
             'name': _nameController.text,
             'description': _descriptionController.text,
@@ -134,6 +136,7 @@ class _AddProductPageState extends State<AddProductPage> {
             'userId': uid,
             'sellerName': sellerName,
             'favoritedBy': [], // Inicializado como lista vacía
+
           });
         }
       } else {

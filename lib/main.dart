@@ -57,6 +57,7 @@ Future<void> updateFCMToken([String? newToken]) async {
   }
 }
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -78,7 +79,7 @@ class SeneMarketApp extends StatelessWidget {
           '/signUp': (context) => const SignUpPage(),
           '/home': (context) => HomePage(),
           '/add_product': (context) => const AddProductPage(),
-          // Eliminamos la ruta '/productDetail'
+
         },
       ),
     );

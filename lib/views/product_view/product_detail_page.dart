@@ -114,6 +114,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     // Lista de imágenes del producto
+
     final List<String> images =
         (widget.product['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
 
@@ -126,6 +127,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         centerTitle: true,
         title: Text(
           widget.product['name'] ?? "Sin Nombre",
+
           style: const TextStyle(
             fontFamily: 'Cabin',
             color: Colors.black,
@@ -143,39 +145,44 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
+
               // Carrusel de imágenes
+
               Container(
                 padding: const EdgeInsets.only(top: 8, right: 15, bottom: 5),
                 width: MediaQuery.of(context).size.width,
                 height: 350,
                 child: images.isNotEmpty
                     ? PageView.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index) {
-                    final imageUrl = images[index];
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(30),
-                      child: Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: 350,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  },
-                )
+                        itemCount: images.length,
+                        itemBuilder: (context, index) {
+                          final imageUrl = images[index];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.network(
+                              imageUrl,
+                              width: double.infinity,
+                              height: 350,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      )
                     : Container(
-                  width: 350,
-                  height: 350,
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
+                        width: 350,
+                        height: 350,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
               ),
+
               // Contenedor con precio y botón de favoritos
+
+
               Container(
                 padding: const EdgeInsets.only(right: 10),
                 width: MediaQuery.of(context).size.width,
@@ -193,7 +200,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     IconButton(
                       icon: Icon(
+
                         _isStarred ? Icons.star : Icons.star_border,
+
 
                         color: Colors.black,
                         size: 40,
@@ -229,6 +238,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
+
 
               // Botones "Buy Now" y "Add to cart"
               Container(
@@ -283,6 +293,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
 
               // Info del vendedor
+
               Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
                 child: Row(
@@ -383,7 +394,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ],
                 ),
               ),
-
             ],
           ),
         ),
