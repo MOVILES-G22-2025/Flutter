@@ -1,26 +1,18 @@
 // lib/data/repositories/auth_repository_impl.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:senemarket/domain/repositories/auth_repository.dart';
+import '../services/auth_service.dart'; // singleton aquí
 
 class AuthRepositoryImpl implements AuthRepository {
-  final FirebaseAuth _firebaseAuth;
-  final FirebaseFirestore _firestore;
-
-  AuthRepositoryImpl({
-    FirebaseAuth? firebaseAuth,
-    FirebaseFirestore? firestore,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  final AuthService _authService = AuthService(); // Uso del singleton
 
   @override
   Future<String?> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
-      return null; // null indica éxito
-    } on FirebaseAuthException catch (e) {
-      return e.message;
+    final user = await _authService.signInWithEmail(email, password);
+    if (user == null) {
+      return 'Incorrect credentials.';
     }
+    return null;
   }
 
   @override
@@ -31,22 +23,19 @@ class AuthRepositoryImpl implements AuthRepository {
       String career,
       String semester,
       ) async {
-    try {
-      final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      final user = credential.user;
-      if (user != null) {
-        await _firestore.collection('users').doc(user.uid).set({
-          'name': name,
-          'career': career,
-          'semester': semester,
-        });
-      }
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
+    final user = await _authService.signUpWithEmail(email, password);
+    if (user == null) {
+      return 'Registration failed.';
     }
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'name': name,
+      'career': career,
+      'semester': semester,
+      'email': email,
+      'favorites': [],
+    });
+
+    return null;
   }
 }
