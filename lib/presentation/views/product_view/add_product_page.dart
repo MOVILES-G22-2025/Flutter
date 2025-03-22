@@ -1,15 +1,17 @@
-import 'dart:io';
+// lib/presentation/views/product_view/add_product_page.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../common/navigation_bar.dart';
-import '../../constants.dart';
-import 'custom_dropdown.dart';
-import 'custom_image.dart';
-import 'custom_textfield.dart';
-import '../../services/product_facade.dart';
+import 'package:senemarket/presentation/viewmodels/add_product_viewmodel.dart';
+import 'package:senemarket/presentation/widgets/custom_image_picker.dart';
+import 'package:senemarket/presentation/widgets/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/custom_dropdown.dart';
+import 'package:senemarket/common/navigation_bar.dart';
+import 'package:senemarket/constants.dart' as constants;
 
 class AddProductPage extends StatefulWidget {
-  const AddProductPage({super.key});
+  const AddProductPage({Key? key}) : super(key: key);
 
   @override
   _AddProductPageState createState() => _AddProductPageState();
@@ -28,6 +30,7 @@ class _AddProductPageState extends State<AddProductPage> {
   String? _selectedCategory;
   bool _isFormValid = false;
 
+  // Valida que todos los campos estén llenos y haya al menos 1 imagen
   void _validateForm() {
     setState(() {
       _isFormValid = _images.isNotEmpty &&
@@ -72,15 +75,16 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-  //LOGICA PARA GUARDAR PRODUCTOS EN FACADE
   Future<void> _saveProduct() async {
+    final addProductVM = context.read<AddProductViewModel>();
+
     if (_isFormValid) {
       try {
-        // Muestra un diálogo de carga
+        // Muestra diálogo de carga
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
+          builder: (_) => const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -92,21 +96,29 @@ class _AddProductPageState extends State<AddProductPage> {
           ),
         );
 
-        // Llamada al Facade
-        await ProductFacade().addProduct(
+        // Convertimos el texto del precio a double
+        final parsedPrice = double.tryParse(_priceController.text) ?? 0.0;
+
+        // Llamamos al ViewModel
+        await addProductVM.addProduct(
           images: _images,
           name: _nameController.text,
           description: _descriptionController.text,
           category: _selectedCategory!,
-          price: _priceController.text,
+          price: parsedPrice,
         );
 
-        // Cierra el diálogo y navega a '/home'
-        Navigator.pop(context); // cierra el AlertDialog
-        Navigator.pushReplacementNamed(context, '/home');
+        // Cerrar el diálogo
+        Navigator.pop(context);
+
+        // Validar si hubo error en el ViewModel
+        if (addProductVM.errorMessage != null && addProductVM.errorMessage!.isNotEmpty) {
+          _showSnackBar(addProductVM.errorMessage!);
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       } catch (e) {
-        // Manejo de errores
-        Navigator.pop(context); // cierra el AlertDialog
+        Navigator.pop(context); // cierra el diálogo
         _showSnackBar('Error al publicar el producto: $e');
       }
     } else {
@@ -118,16 +130,20 @@ class _AddProductPageState extends State<AddProductPage> {
     setState(() {
       _selectedIndex = index;
     });
+    // Maneja la navegación en el Bottom Nav
   }
 
   @override
   Widget build(BuildContext context) {
+    final addProductVM = context.watch<AddProductViewModel>();
+    final isLoading = addProductVM.isLoading;
+
     return Scaffold(
-      backgroundColor: AppColors.primary50,
+      backgroundColor: constants.AppColors.primary50,
       appBar: AppBar(
-        backgroundColor: AppColors.primary50,
+        backgroundColor: constants.AppColors.primary50,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primary0),
+        iconTheme: const IconThemeData(color: constants.AppColors.primary0),
         centerTitle: true,
         title: const Text(
           'Add product',
@@ -135,14 +151,16 @@ class _AddProductPageState extends State<AddProductPage> {
             fontFamily: 'Cabin',
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.primary0,
+            color: constants.AppColors.primary0,
           ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -168,7 +186,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   const SizedBox(height: 12),
                   CustomDropdown(
                     label: 'Category',
-                    items: ProductClassification.categories,
+                    items: constants.ProductClassification.categories,
                     selectedItem: _selectedCategory,
                     onChanged: (newValue) {
                       setState(() {
@@ -187,8 +205,8 @@ class _AddProductPageState extends State<AddProductPage> {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFormValid
-                          ? AppColors.primary30
-                          : AppColors.secondary40,
+                          ? constants.AppColors.primary30
+                          : constants.AppColors.secondary40,
                       padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
                       textStyle: const TextStyle(
                         fontFamily: 'Cabin',
@@ -196,14 +214,16 @@ class _AddProductPageState extends State<AddProductPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: _isFormValid ? _saveProduct : null,
-                    child: const Text(
+                    onPressed: isLoading ? null : _saveProduct,
+                    child: isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text(
                       'Add',
                       style: TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primary50,
+                        color: constants.AppColors.primary50,
                       ),
                     ),
                   ),
