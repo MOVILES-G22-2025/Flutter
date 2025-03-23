@@ -1,9 +1,9 @@
-// lib/data/models/product_dto.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:algolia/algolia.dart';
 
+/// Data Transfer Object (DTO) to manage product data
+/// between Firestore, Algolia and domain layers.
 class ProductDTO {
   final String id;
   final String name;
@@ -13,6 +13,7 @@ class ProductDTO {
   final List<String> imageUrls;
   final String sellerName;
   final List<String> favoritedBy;
+  final DateTime? timestamp;
 
   const ProductDTO({
     required this.id,
@@ -23,11 +24,13 @@ class ProductDTO {
     required this.imageUrls,
     required this.sellerName,
     required this.favoritedBy,
+    this.timestamp,
   });
 
   // -----------------------------
-  // Firebase ↔ DTO
+  // Firebase → DTO
   // -----------------------------
+  /// Builds a ProductDTO from Firestore data.
   factory ProductDTO.fromFirestore(String docId, Map<String, dynamic> map) {
     return ProductDTO(
       id: docId,
@@ -38,9 +41,11 @@ class ProductDTO {
       imageUrls: _toStringList(map['imageUrls']),
       sellerName: map['sellerName'] ?? '',
       favoritedBy: _toStringList(map['favoritedBy']),
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate(),
     );
   }
 
+  /// Converts ProductDTO to Firestore map for saving.
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
@@ -54,8 +59,9 @@ class ProductDTO {
   }
 
   // -----------------------------
-  // Algolia ↔ DTO
+  // Algolia → DTO
   // -----------------------------
+  /// Converts a search result from Algolia into ProductDTO.
   factory ProductDTO.fromAlgoliaHit(AlgoliaObjectSnapshot hit) {
     final map = Map<String, dynamic>.from(hit.data);
     return ProductDTO(
@@ -71,8 +77,9 @@ class ProductDTO {
   }
 
   // -----------------------------
-  // Dominio ↔ DTO
+  // Domain ↔ DTO
   // -----------------------------
+  /// Converts DTO to domain Product entity.
   Product toDomain() {
     return Product(
       id: id,
@@ -83,9 +90,11 @@ class ProductDTO {
       imageUrls: imageUrls,
       sellerName: sellerName,
       favoritedBy: favoritedBy,
+      timestamp: timestamp,
     );
   }
 
+  /// Converts domain Product entity to DTO.
   static ProductDTO fromDomain(Product product) {
     return ProductDTO(
       id: product.id,
@@ -100,8 +109,10 @@ class ProductDTO {
   }
 
   // -----------------------------
-  // Auxiliares
+  // Helpers
   // -----------------------------
+
+  /// Tries to convert any input into double.
   static double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is num) return value.toDouble();
@@ -109,6 +120,7 @@ class ProductDTO {
     return 0.0;
   }
 
+  /// Ensures the field is a list of strings.
   static List<String> _toStringList(dynamic val) {
     if (val == null) return [];
     if (val is List) {
@@ -117,6 +129,7 @@ class ProductDTO {
     return [];
   }
 
+  /// Alternative way to build from DocumentSnapshot (used in streams).
   factory ProductDTO.fromDocumentSnapshot(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return ProductDTO(
@@ -128,7 +141,7 @@ class ProductDTO {
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       sellerName: data['sellerName'] ?? '',
       favoritedBy: [],
+      timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
     );
   }
-
 }

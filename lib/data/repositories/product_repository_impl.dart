@@ -1,4 +1,3 @@
-// lib/data/repositories/product_repository_impl.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:algolia/algolia.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +7,8 @@ import '../../domain/repositories/product_repository.dart';
 import '../models/product_dto.dart';
 import '../datasources/product_remote_data_source.dart';
 
+/// Implements the ProductRepository interface.
+/// Connects domain logic with Firebase and Algolia services.
 class ProductRepositoryImpl implements ProductRepository {
   final FirebaseAuth _auth;
   final ProductRemoteDataSource _remoteDataSource;
@@ -25,6 +26,7 @@ class ProductRepositoryImpl implements ProductRepository {
               apiKey: 'e1450d2b94d56f3a2bf7a7978f255be1',
             );
 
+  /// Uses Algolia to search products by keyword.
   @override
   Future<List<Product>> searchProducts(String query) async {
     final snapshot =
@@ -34,6 +36,7 @@ class ProductRepositoryImpl implements ProductRepository {
         .toList();
   }
 
+  /// Adds a new product to Firestore with uploaded images and seller info.
   @override
   Future<void> addProduct({
     required List<XFile?> images,
@@ -52,6 +55,7 @@ class ProductRepositoryImpl implements ProductRepository {
     await _remoteDataSource.saveProduct(user.uid, dto);
   }
 
+  /// Returns a real-time stream of product list from Firestore.
   @override
   Stream<List<Product>> getProductsStream() {
     return _remoteDataSource.getProductDTOStream().map(
@@ -59,11 +63,13 @@ class ProductRepositoryImpl implements ProductRepository {
     );
   }
 
+  /// Adds a user ID to the favoritedBy list of a product.
   @override
   Future<void> addProductFavorite({required String userId, required String productId}) {
     return _remoteDataSource.updateFavorites(productId, userId, true);
   }
 
+  /// Removes a user ID from the favoritedBy list of a product.
   @override
   Future<void> removeProductFavorite({required String userId, required String productId}) {
     return _remoteDataSource.updateFavorites(productId, userId, false);

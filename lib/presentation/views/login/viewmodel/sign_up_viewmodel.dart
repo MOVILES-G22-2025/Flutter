@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
-
 import '../../../../domain/repositories/auth_repository.dart';
 
+/// ViewModel that manages user registration logic and state.
+/// It uses AuthRepository to handle actual sign-up process.
 class SignUpViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
 
@@ -10,6 +11,8 @@ class SignUpViewModel extends ChangeNotifier {
 
   SignUpViewModel(this._authRepository);
 
+  /// Registers a new user with profile data.
+  /// Shows loading and error feedback to the UI.
   Future<void> signUp({
     required String email,
     required String password,

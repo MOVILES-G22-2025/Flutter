@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:senemarket/constants.dart';
+import '../../../constants.dart';
+import 'filter_menu.dart';
 
 class FilterBar extends StatefulWidget {
-  /// Lista de categorias a mostrar.
   final List<String> categories;
-
   final List<String>? selectedCategories;
 
-  /// Callback que se dispara cuando se seleccionan/deseleccionan categorias.
+  final ValueChanged<String>? onSortByDateSelected;
+  final ValueChanged<String>? onSortByPriceSelected;
+
   final ValueChanged<List<String>> onCategoriesSelected;
 
   const FilterBar({
@@ -15,6 +16,8 @@ class FilterBar extends StatefulWidget {
     required this.categories,
     this.selectedCategories,
     required this.onCategoriesSelected,
+    this.onSortByDateSelected,
+    this.onSortByPriceSelected,
   }) : super(key: key);
 
   @override
@@ -23,13 +26,13 @@ class FilterBar extends StatefulWidget {
 
 class _FilterBarState extends State<FilterBar> {
   late Set<String> _selectedCategories;
+  String _selectedDateOrder = 'Newest first';
+  String _selectedPriceOrder = 'Price: Low to High';
 
   @override
   void initState() {
     super.initState();
-    _selectedCategories = widget.selectedCategories != null
-        ? widget.selectedCategories!.toSet()
-        : <String>{};
+    _selectedCategories = widget.selectedCategories?.toSet() ?? <String>{};
   }
 
   void _toggleSelection(String category) {
@@ -43,18 +46,43 @@ class _FilterBarState extends State<FilterBar> {
     widget.onCategoriesSelected(_selectedCategories.toList());
   }
 
+  void _openFilterMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return FilterMenu(
+          selectedDateOrder: _selectedDateOrder,
+          selectedPriceOrder: _selectedPriceOrder,
+          onDateSortSelected: (selected) {
+            setState(() {
+              _selectedDateOrder = selected;
+            });
+            widget.onSortByDateSelected?.call(selected);
+          },
+          onPriceSortSelected: (selected) {
+            setState(() {
+              _selectedPriceOrder = selected;
+            });
+            widget.onSortByPriceSelected?.call(selected);
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // icono de filtro
-        Icon(
-          Icons.filter_list_rounded,
-          size: 30,
-          color: Colors.black,
+        GestureDetector(
+          onTap: _openFilterMenu,
+          child: const Icon(
+            Icons.filter_list_rounded,
+            size: 30,
+            color: Colors.black,
+          ),
         ),
         const SizedBox(width: 8),
-        // Lista horizontal de categorías
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -66,10 +94,7 @@ class _FilterBarState extends State<FilterBar> {
                   child: GestureDetector(
                     onTap: () => _toggleSelection(category),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
@@ -79,7 +104,6 @@ class _FilterBarState extends State<FilterBar> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Indicador estilo "checkbox" (círculo)
                           Container(
                             width: 16,
                             height: 16,
@@ -104,9 +128,7 @@ class _FilterBarState extends State<FilterBar> {
                             category,
                             style: TextStyle(
                               color: Colors.black,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               fontFamily: 'Cabin',
                             ),
                           ),

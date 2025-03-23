@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
-
 import '../../widgets/global/navigation_bar.dart';
 
+/// This page shows detailed information about a selected product.
 class ProductDetailPage extends StatefulWidget {
   final Product product;
 
@@ -30,9 +32,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
-    _checkIfFavorited();
+    _checkIfFavorited(); // Check if the product is in the user's favorites list
   }
 
+  /// Checks Firestore to know if the current product is a favorite.
   Future<void> _checkIfFavorited() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) return;
@@ -51,6 +54,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
+  /// Adds or removes the product from user's favorites.
   Future<void> _toggleFavorite() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) {
@@ -75,6 +79,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
+  /// Handles navigation bar interaction at the bottom of the page.
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
 
@@ -129,6 +134,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           children: [
             ProductImageCarousel(images: images),
+
+            /// Product price + favorite button
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Row(
@@ -154,6 +161,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Show publish date if available
+            if (widget.product.timestamp != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Posted: ${DateFormat.yMMMMd().format(widget.product.timestamp!)}',
+                    style: const TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+
+            /// Category info
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -181,6 +207,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ],
             ),
+
+            /// Buy & Cart buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               child: Column(
@@ -226,6 +254,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Seller info
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
               child: Row(
@@ -272,6 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Description
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Column(

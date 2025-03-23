@@ -1,9 +1,9 @@
-// lib/data/repositories/auth_repository_impl.dart
-
 import 'package:senemarket/domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
 import '../datasources/user_remote_data_source.dart';
 
+/// Implements the AuthRepository interface.
+/// Connects domain logic with remote data sources (Firebase).
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _authDataSource;
   final UserRemoteDataSource _userDataSource;
@@ -14,6 +14,8 @@ class AuthRepositoryImpl implements AuthRepository {
   })  : _authDataSource = authDataSource ?? AuthRemoteDataSource(),
         _userDataSource = userDataSource ?? UserRemoteDataSource();
 
+  /// Authenticates user using email and password.
+  /// Returns null if success, or an error message if failed.
   @override
   Future<String?> signInWithEmailAndPassword(String email, String password) async {
     final user = await _authDataSource.signInWithEmail(email, password);
@@ -23,6 +25,8 @@ class AuthRepositoryImpl implements AuthRepository {
     return null;
   }
 
+  /// Creates a new user and stores their profile in Firestore.
+  /// Returns null if success, or an error message if failed.
   @override
   Future<String?> signUpWithEmailAndPassword(
       String email,
@@ -47,11 +51,13 @@ class AuthRepositoryImpl implements AuthRepository {
     return null;
   }
 
+  /// Ends the current user session.
   @override
   Future<void> signOut() async {
     await _authDataSource.signOut();
   }
 
+  /// Returns true if a user is signed in.
   @override
   bool get isAuthenticated => _authDataSource.isAuthenticated;
 }

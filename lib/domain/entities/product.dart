@@ -1,5 +1,5 @@
-// lib/domain/entities/product.dart
-
+/// Domain entity that represents a product in the app.
+/// This model should be independent from Firebase or external sources.
 class Product {
   final String id;
   final String name;
@@ -9,6 +9,7 @@ class Product {
   final List<String> imageUrls;
   final String sellerName;
   final List<String> favoritedBy;
+  final DateTime? timestamp;
 
   const Product({
     required this.id,
@@ -19,8 +20,10 @@ class Product {
     required this.imageUrls,
     required this.sellerName,
     required this.favoritedBy,
+    this.timestamp,
   });
 
+  /// Creates a copy of the product with optional field overrides.
   Product copyWith({
     String? id,
     String? name,
@@ -30,6 +33,7 @@ class Product {
     List<String>? imageUrls,
     String? sellerName,
     List<String>? favoritedBy,
+    DateTime? timestamp,
   }) {
     return Product(
       id: id ?? this.id,
@@ -40,9 +44,11 @@ class Product {
       imageUrls: imageUrls ?? this.imageUrls,
       sellerName: sellerName ?? this.sellerName,
       favoritedBy: favoritedBy ?? this.favoritedBy,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 
+  /// Equality override to compare by value.
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -55,8 +61,10 @@ class Product {
               price == other.price &&
               imageUrls.toString() == other.imageUrls.toString() &&
               sellerName == other.sellerName &&
-              favoritedBy.toString() == other.favoritedBy.toString();
+              favoritedBy.toString() == other.favoritedBy.toString() &&
+              timestamp == other.timestamp;
 
+  /// Custom hashCode to support equality.
   @override
   int get hashCode =>
       id.hashCode ^
@@ -66,5 +74,6 @@ class Product {
       price.hashCode ^
       imageUrls.hashCode ^
       sellerName.hashCode ^
-      favoritedBy.hashCode;
+      favoritedBy.hashCode ^
+      timestamp.hashCode;
 }

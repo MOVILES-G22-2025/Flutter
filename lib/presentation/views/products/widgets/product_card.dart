@@ -1,14 +1,10 @@
-// lib/presentation/views/product_view/product_card.dart
-
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/product_detail_page.dart';
 
-/// Tarjeta para mostrar un [Product].
-///
-/// [onCategoryTap] se invoca cuando el usuario hace tap
-/// en la tarjeta, pasando la categoría del producto.
+/// UI card to display a single [Product].
+/// Calls [onCategoryTap] when the card is tapped (optional).
 class ProductCard extends StatelessWidget {
   final Product product;
   final ValueChanged<String>? onCategoryTap;
@@ -21,6 +17,7 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get product details
     final category = product.category;
     final productName = product.name.isNotEmpty ? product.name : "Sin nombre";
     final productPrice = product.price;
@@ -28,11 +25,12 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Si deseas incrementar la categoría al hacer tap
+        // Call category tap callback if provided
         if (onCategoryTap != null && category.isNotEmpty) {
           onCategoryTap!(category);
         }
-        // Navega a la pantalla de detalle del producto
+
+        // Navigate to product detail page
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -49,7 +47,7 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen
+            // Product image
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -60,46 +58,33 @@ class ProductCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                   errorWidget: (context, url, error) => Container(
                     color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.error,
-                      size: 50,
-                      color: Colors.red,
-                    ),
+                    child: const Icon(Icons.error, size: 50, color: Colors.red),
                   ),
                 )
                     : Container(
                   width: double.infinity,
                   color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
+                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
                 ),
               ),
             ),
 
-            // Nombre
+            // Product name
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 productName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
 
-            // Precio
+            // Product price
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(

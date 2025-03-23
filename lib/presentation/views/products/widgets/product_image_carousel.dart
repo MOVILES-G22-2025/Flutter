@@ -1,9 +1,9 @@
-// lib/presentation/widgets/product_image_carousel.dart
-
 import 'package:flutter/material.dart';
-
 import '../../../widgets/global/full_screen_image_page.dart';
 
+/// Carousel to show product images.
+/// User can swipe or tap arrows to navigate.
+/// Tapping on image opens full screen preview.
 class ProductImageCarousel extends StatefulWidget {
   final List<String> images;
 
@@ -24,6 +24,8 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.9);
+
+    // Updates current page index when user scrolls
     _pageController.addListener(() {
       final nextPage = _pageController.page?.round() ?? 0;
       if (_currentPage != nextPage) {
@@ -36,7 +38,7 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pageController.dispose(); // Good practice: clean up controller
     super.dispose();
   }
 
@@ -60,6 +62,7 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
       child: totalImages > 0
           ? Stack(
         children: [
+          // Main carousel using PageView
           PageView.builder(
             controller: _pageController,
             itemCount: totalImages,
@@ -82,7 +85,8 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
               );
             },
           ),
-          // Flecha izquierda (si no es la primera página)
+
+          // Left arrow (only if not on first page)
           if (_currentPage > 0)
             Positioned(
               left: 5,
@@ -96,10 +100,7 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.arrow_back_ios,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.arrow_back_ios, color: Colors.white),
                   ),
                   onPressed: () {
                     _pageController.previousPage(
@@ -111,7 +112,7 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
               ),
             ),
 
-          // Flecha derecha (si no es la última página)
+          // Right arrow (only if not on last page)
           if (_currentPage < totalImages - 1)
             Positioned(
               right: 5,
@@ -125,10 +126,7 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.arrow_forward_ios, color: Colors.white),
                   ),
                   onPressed: () {
                     _pageController.nextPage(
@@ -141,15 +139,12 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
             ),
         ],
       )
+      // Placeholder when no images
           : Container(
         width: 350,
         height: 350,
         color: Colors.grey[300],
-        child: const Icon(
-          Icons.image,
-          size: 50,
-          color: Colors.grey,
-        ),
+        child: const Icon(Icons.image, size: 50, color: Colors.grey),
       ),
     );
   }
