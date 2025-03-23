@@ -1,11 +1,8 @@
-// lib/presentation/views/login_view/login_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:senemarket/constants.dart';
 
-/// Pantalla de “inicio” o “welcome” para tu app,
-/// mostrando botones "Sign in" y "Create account".
-/// Navega a las rutas '/signIn' y '/signUp'.
+/// Welcome screen of the app.
+/// Offers navigation to "Sign in" and "Create account" pages.
 class LoginPage extends StatelessWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -16,12 +13,11 @@ class LoginPage extends StatelessWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          // Para centrar el contenido verticalmente, usa un Column dentro de un Expanded
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo o imagen principal
+              // App logo with animation when navigating
               Hero(
                 tag: 'logoHero',
                 child: Image.asset(
@@ -31,7 +27,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Título principal
+              // App title
               const Text(
                 'SeneMarket',
                 style: TextStyle(
@@ -43,7 +39,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Subtítulo
+              // App subtitle
               const Text(
                 'Find everything you need for your career in one place',
                 textAlign: TextAlign.center,
@@ -55,10 +51,9 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // Botón para Sign in
+              // Button to go to sign-in screen
               ElevatedButton(
                 onPressed: () {
-                  // Usamos rutas nombradas en vez de instanciar la página directamente
                   Navigator.pushNamed(context, '/signIn');
                 },
                 style: ElevatedButton.styleFrom(
@@ -81,7 +76,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Texto para navegar a crear cuenta
+              // Text + link to create account
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

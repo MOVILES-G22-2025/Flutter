@@ -1,23 +1,27 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AuthService {
-  // Instancia privada de FirebaseAuth
+/// Handles all authentication logic using FirebaseAuth.
+/// This class is used to connect to Firebase to sign in, sign up and sign out users.
+class AuthRemoteDataSource {
   final FirebaseAuth _firebaseAuth;
 
-  // Singleton privado estático
-  static final AuthService _instance = AuthService._internal(FirebaseAuth.instance);
+  /// Singleton instance to avoid creating multiple FirebaseAuth instances.
+  static final AuthRemoteDataSource _instance =
+  AuthRemoteDataSource._internal(FirebaseAuth.instance);
 
-  // Constructor interno privado
-  AuthService._internal(this._firebaseAuth);
+  /// Private constructor for singleton pattern.
+  AuthRemoteDataSource._internal(this._firebaseAuth);
 
-  factory AuthService() {
+  /// Factory to return the same instance every time.
+  factory AuthRemoteDataSource() {
     return _instance;
   }
 
-  // Acceso directo a currentUser
+  /// Returns the current signed in user.
   User? get currentUser => _firebaseAuth.currentUser;
 
-  // Sign In con email y contraseña
+  /// Sign in a user with email and password.
+  /// Returns a User if success, or null if failed.
   Future<User?> signInWithEmail(String email, String password) async {
     try {
       final credentials = await _firebaseAuth.signInWithEmailAndPassword(
@@ -31,7 +35,8 @@ class AuthService {
     }
   }
 
-  // registro (Sign Up)
+  /// Register a new user with email and password.
+  /// Returns a User if success, or null if failed.
   Future<User?> signUpWithEmail(String email, String password) async {
     try {
       final credentials = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -45,11 +50,11 @@ class AuthService {
     }
   }
 
-  // cerrar sesión (Sign Out)
+  /// Sign out the current user.
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
   }
 
-  // Verificar si usuario está autenticado
+  /// Check if a user is currently authenticated (logged in).
   bool get isAuthenticated => currentUser != null;
 }

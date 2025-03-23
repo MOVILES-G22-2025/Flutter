@@ -1,7 +1,8 @@
-// lib/presentation/viewmodels/sign_in_viewmodel.dart
-import 'package:flutter/material.dart';
-import 'package:senemarket/domain/repositories/auth_repository.dart';
+import 'package:flutter/cupertino.dart';
+import '../../../../domain/repositories/auth_repository.dart';
 
+/// ViewModel that manages sign-in logic and state for the UI.
+/// Delegates authentication to the AuthRepository.
 class SignInViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
 
@@ -10,6 +11,8 @@ class SignInViewModel extends ChangeNotifier {
 
   SignInViewModel(this._authRepository);
 
+  /// Tries to sign in with email and password.
+  /// Shows loading and error state to the UI.
   Future<void> signIn(String email, String password) async {
     isLoading = true;
     errorMessage = '';

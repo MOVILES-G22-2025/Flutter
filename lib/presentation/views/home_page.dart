@@ -1,30 +1,21 @@
-// lib/presentation/views/home_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
 
-// Widgets y barras
-import 'package:senemarket/common/navigation_bar.dart';
-import 'package:senemarket/common/search_bar.dart' as searchBar;
-import 'package:senemarket/common/filter_bar.dart';
+// UI components
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+import 'package:senemarket/presentation/widgets/global/search_bar.dart' as searchBar;
+import 'package:senemarket/presentation/widgets/global/filter_bar.dart';
+import 'package:senemarket/presentation/views/products/widgets/product_card.dart';
 
-// ViewModel para la búsqueda
-import 'package:senemarket/presentation/viewmodels/product_search_viewmodel.dart';
-
-// Tarjeta de producto que ahora espera un `Product`
-import 'package:senemarket/presentation/views/product_view/product_card.dart';
-
-// Constantes (categorías, colores, etc.)
+// Constants and data
 import 'package:senemarket/constants.dart' as constants;
-
-// Entidad de dominio
 import 'package:senemarket/domain/entities/product.dart';
-
-// Repositorio (aún lo instanciamos localmente,
-// aunque lo ideal es usar Provider para inyectarlo)
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 
+/// Home page that displays product grid, search bar and filters
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -35,29 +26,28 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // Categorías seleccionadas para filtrar
+  // Sort settings
+  String _sortOrder = 'Newest first';
+  String? _sortPrice;
+
+  // Selected categories for filtering
   List<String> _selectedCategories = [];
 
-  // Mapa para conteo de clics por categoría
+  // Tracks category clicks for sorting
   Map<String, int> _categoryClicks = {};
 
   final String userId = FirebaseAuth.instance.currentUser!.uid;
-
-  // Aquí instanciamos el ProductRepository.
-  // (Ideal: usar un Provider<ProductRepository> en main.dart)
   final _productRepo = ProductRepositoryImpl();
 
   @override
   void initState() {
     super.initState();
-    _loadUserClicks();
+    _loadUserClicks(); // Load how many times each category was clicked
   }
 
+  /// Load category click data from Firestore
   Future<void> _loadUserClicks() async {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
     if (userDoc.exists) {
       final data = userDoc.data();
       setState(() {
@@ -66,24 +56,32 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Handles tap on bottom navigation bar
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0: Navigator.pushReplacementNamed(context, '/home'); break;
+      case 1: Navigator.pushReplacementNamed(context, '/chats'); break;
+      case 2: Navigator.pushReplacementNamed(context, '/add_product'); break;
+      case 3: Navigator.pushReplacementNamed(context, '/favorites'); break;
+      case 4: Navigator.pushReplacementNamed(context, '/profile'); break;
+    }
   }
 
-  /// Incrementa y persiste el contador de clics de una categoría.
+  /// Increment category click count and save to Firestore
   void _incrementCategoryClick(String category) async {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
+
     final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
   }
 
-  /// Retorna las categorías ordenadas según la cantidad de clics.
+  /// Return categories sorted by user's clicks
   List<String> get _categoriesSortedByClicks {
     final allCategories = constants.ProductClassification.categories;
     final sortedList = allCategories.toList()
@@ -95,35 +93,52 @@ class _HomePageState extends State<HomePage> {
     return sortedList;
   }
 
-  /// Filtra los productos según el query del ViewModel y las categorías seleccionadas.
+  /// Filter and sort the products
   List<Product> _filterProducts(
       List<Product> baseProducts,
       ProductSearchViewModel searchViewModel,
       ) {
     final searchQuery = searchViewModel.searchQuery;
 
-    // Si hay un query, usamos los resultados del ViewModel (Algolia); si no, baseProducts.
+    // Use Algolia results if query exists
     final List<Product> products = searchQuery.isNotEmpty
         ? searchViewModel.searchResults
         : baseProducts;
 
-    // Si no hay categorías seleccionadas, devolvemos tal cual.
-    if (_selectedCategories.isEmpty) {
-      return products;
+    // Filter by selected categories
+    List<Product> filtered = _selectedCategories.isEmpty
+        ? products
+        : products.where((product) {
+      final productCategory = product.category.toLowerCase();
+      return _selectedCategories.any((selected) =>
+          productCategory.contains(selected.toLowerCase()));
+    }).toList();
+
+    // Sort by date
+    filtered.sort((a, b) {
+      if (a.timestamp == null && b.timestamp == null) return 0;
+      if (a.timestamp == null) return 1;
+      if (b.timestamp == null) return -1;
+
+      return _sortOrder == 'Newest first'
+          ? b.timestamp!.compareTo(a.timestamp!)
+          : a.timestamp!.compareTo(b.timestamp!);
+    });
+
+    // Optional: sort by price if selected
+    if (_sortPrice != null) {
+      filtered.sort((a, b) {
+        return _sortPrice == 'Price: Low to High'
+            ? a.price.compareTo(b.price)
+            : b.price.compareTo(a.price);
+      });
     }
 
-    // De lo contrario, filtramos por categoría
-    return products.where((product) {
-      final productCategory = product.category.toLowerCase();
-      return _selectedCategories.any(
-            (selected) => productCategory.contains(selected.toLowerCase()),
-      );
-    }).toList();
+    return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Obtenemos el ProductSearchViewModel para el query
     final productSearchViewModel = context.watch<ProductSearchViewModel>();
 
     return Scaffold(
@@ -132,7 +147,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Barra de búsqueda
+            // Search input
             Padding(
               padding: const EdgeInsets.only(top: 36.0),
               child: searchBar.SearchBar(
@@ -144,7 +159,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16.0),
 
-            // Barra de filtros
+            // Filter bar
             FilterBar(
               categories: _categoriesSortedByClicks,
               selectedCategories: _selectedCategories,
@@ -153,10 +168,20 @@ class _HomePageState extends State<HomePage> {
                   _selectedCategories = selected;
                 });
               },
+              onSortByDateSelected: (selectedOrder) {
+                setState(() {
+                  _sortOrder = selectedOrder;
+                });
+              },
+              onSortByPriceSelected: (selectedOrder) {
+                setState(() {
+                  _sortPrice = selectedOrder;
+                });
+              },
             ),
             const SizedBox(height: 16.0),
 
-            // StreamBuilder con ProductRepository para mostrar los productos
+            // Product grid
             Expanded(
               child: StreamBuilder<List<Product>>(
                 stream: _productRepo.getProductsStream(),
@@ -164,6 +189,7 @@ class _HomePageState extends State<HomePage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
+
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(
                       child: Text(
@@ -177,10 +203,7 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
 
-                  // Todos los productos provenientes de Firestore
                   final allProducts = snapshot.data!;
-
-                  // Aplicar el filtrado por query y categorías
                   final filteredProducts = _filterProducts(
                     allProducts,
                     productSearchViewModel,
@@ -212,7 +235,6 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
       ),
     );
   }

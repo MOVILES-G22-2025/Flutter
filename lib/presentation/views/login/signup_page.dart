@@ -1,14 +1,11 @@
-// lib/presentation/views/login_view/signup_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/presentation/viewmodels/sign_up_viewmodel.dart';
+import 'viewmodel/sign_up_viewmodel.dart';
 
-/// Pantalla para registrar un nuevo usuario.
-/// Usa SignUpViewModel para manejar la lógica de registro.
-///
+/// Page to create a new user account.
+/// Uses SignUpViewModel to handle registration logic.
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
 
@@ -17,19 +14,18 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  // Controladores de texto
+  // Controllers for text inputs
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _careerController = TextEditingController();
   final TextEditingController _semesterController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-  TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // Mensaje de error local si hay campos vacíos o contraseñas que no coinciden
+  // Local error message for invalid form state
   String _localErrorMessage = '';
 
-  // Controlamos qué campos están vacíos para pintar bordes rojos (opcional)
+  // Track empty fields to show red borders if needed
   final Map<String, bool> _emptyFields = {
     'name': false,
     'email': false,
@@ -41,7 +37,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtenemos el ViewModel (ya inyectado en main.dart)
     final signUpViewModel = context.watch<SignUpViewModel>();
 
     return Scaffold(
@@ -57,7 +52,6 @@ class _SignUpPageState extends State<SignUpPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: SizedBox(
-              // Ocupamos ~85% de la pantalla para el contenido
               height: MediaQuery.of(context).size.height * 0.85,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -74,47 +68,29 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // TextFields
+                  // Input fields
                   _buildTextField('Full name', _nameController, 'name'),
                   _buildTextField('Uniandes email', _emailController, 'email'),
                   _buildTextField('Career', _careerController, 'career'),
-                  _buildTextField('Semester', _semesterController, 'semester',
-                      isNumeric: true),
-                  _buildTextField(
-                    'Password',
-                    _passwordController,
-                    'password',
-                    obscureText: true,
-                  ),
-                  _buildTextField(
-                    'Confirm password',
-                    _confirmPasswordController,
-                    'confirmPassword',
-                    obscureText: true,
-                  ),
+                  _buildTextField('Semester', _semesterController, 'semester', isNumeric: true),
+                  _buildTextField('Password', _passwordController, 'password', obscureText: true),
+                  _buildTextField('Confirm password', _confirmPasswordController, 'confirmPassword', obscureText: true),
                   const SizedBox(height: 10),
 
-                  // Mensajes de error
+                  // Error messages
                   if (_localErrorMessage.isNotEmpty)
                     Text(
                       _localErrorMessage,
-                      style: const TextStyle(
-                        color: AppColors.primary30,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: AppColors.primary30, fontSize: 14),
                     ),
-                  // Si el ViewModel trae error de Firebase (auth):
                   if (signUpViewModel.errorMessage.isNotEmpty)
                     Text(
                       signUpViewModel.errorMessage,
-                      style: const TextStyle(
-                        color: AppColors.primary30,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: AppColors.primary30, fontSize: 14),
                     ),
                   const SizedBox(height: 20),
 
-                  // Botón Register
+                  // Register button
                   ElevatedButton(
                     onPressed: signUpViewModel.isLoading ? null : _signUp,
                     style: ElevatedButton.styleFrom(
@@ -122,8 +98,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12.0, horizontal: 24.0),
+                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
                     ),
                     child: signUpViewModel.isLoading
                         ? const CircularProgressIndicator()
@@ -139,23 +114,16 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Texto para ir a SignIn
+                  // Link to Sign In
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
                         'Already have an account? ',
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 14,
-                          color: AppColors.primary0,
-                        ),
+                        style: TextStyle(fontFamily: 'Cabin', fontSize: 14, color: AppColors.primary0),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          // Vamos a '/signIn'
-                          Navigator.pushReplacementNamed(context, '/signIn');
-                        },
+                        onTap: () => Navigator.pushReplacementNamed(context, '/signIn'),
                         child: const Text(
                           'Sign In',
                           style: TextStyle(
@@ -177,11 +145,10 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  /// Método para registrar un nuevo usuario usando el SignUpViewModel.
+  /// Handles form validation and calls the ViewModel to register the user.
   Future<void> _signUp() async {
     final signUpViewModel = context.read<SignUpViewModel>();
 
-    // Limpiamos el error local y del ViewModel
     setState(() {
       _localErrorMessage = '';
       signUpViewModel.errorMessage = '';
@@ -194,7 +161,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    // Marcar campos vacíos:
+    // Mark empty fields to show red borders
     setState(() {
       _emptyFields['name'] = name.isEmpty;
       _emptyFields['email'] = email.isEmpty;
@@ -204,7 +171,6 @@ class _SignUpPageState extends State<SignUpPage> {
       _emptyFields['confirmPassword'] = confirmPassword.isEmpty;
     });
 
-    // Verificar si hay algún campo vacío
     if (_emptyFields.containsValue(true)) {
       setState(() {
         _localErrorMessage = 'All fields must be filled out';
@@ -212,7 +178,6 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    // Verificar email con dominio
     if (!email.endsWith('@uniandes.edu.co')) {
       setState(() {
         _localErrorMessage = 'You must use an @uniandes.edu.co email';
@@ -220,7 +185,6 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    // Verificar coincidencia de contraseñas
     if (password != confirmPassword) {
       setState(() {
         _localErrorMessage = 'Passwords do not match';
@@ -228,7 +192,6 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    // Llamamos al ViewModel
     await signUpViewModel.signUp(
       email: email,
       password: password,
@@ -237,18 +200,12 @@ class _SignUpPageState extends State<SignUpPage> {
       semester: semester,
     );
 
-    // Si no hubo error, vamos a '/home'
     if (signUpViewModel.errorMessage.isEmpty) {
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      // Si falla, el error viene en signUpViewModel.errorMessage
-      setState(() {
-        // Simplemente forzamos a que se redibuje y muestre el error.
-      });
     }
   }
 
-  /// Crea un TextField con estilo uniforme y validación de campos vacíos
+  /// Builds a styled TextField with optional validation.
   Widget _buildTextField(
       String hintText,
       TextEditingController controller,
@@ -262,8 +219,7 @@ class _SignUpPageState extends State<SignUpPage> {
         controller: controller,
         obscureText: obscureText,
         keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-        inputFormatters:
-        isNumeric ? [FilteringTextInputFormatter.digitsOnly] : [],
+        inputFormatters: isNumeric ? [FilteringTextInputFormatter.digitsOnly] : [],
         style: const TextStyle(
           fontFamily: 'Cabin',
           fontSize: 16,
@@ -296,13 +252,11 @@ class _SignUpPageState extends State<SignUpPage> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-              color:
-              _emptyFields[fieldKey]! ? Colors.red : AppColors.primary30,
+              color: _emptyFields[fieldKey]! ? Colors.red : AppColors.primary30,
               width: 2.0,
             ),
           ),
-          contentPadding:
-          const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         ),
       ),
     );

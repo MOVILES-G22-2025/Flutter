@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/domain/entities/product.dart';
-import 'package:senemarket/presentation/widgets/product_image_carousel.dart';
+import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
+import '../../widgets/global/navigation_bar.dart';
 
+/// This page shows detailed information about a selected product.
 class ProductDetailPage extends StatefulWidget {
   final Product product;
 
@@ -29,9 +32,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
-    _checkIfFavorited();
+    _checkIfFavorited(); // Check if the product is in the user's favorites list
   }
 
+  /// Checks Firestore to know if the current product is a favorite.
   Future<void> _checkIfFavorited() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) return;
@@ -50,6 +54,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
+  /// Adds or removes the product from user's favorites.
   Future<void> _toggleFavorite() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || productId.isEmpty) {
@@ -69,9 +74,31 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         await _userRepo.removeFavorite(productId);
         await _productRepo.removeProductFavorite(userId: userId, productId: productId);
       }
-      print("Favorites updated successfully.");
     } catch (e) {
       print("Error updating favorite: $e");
+    }
+  }
+
+  /// Handles navigation bar interaction at the bottom of the page.
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
     }
   }
 
@@ -86,29 +113,29 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
-        title: Text(
-          widget.product.name.isNotEmpty ? widget.product.name : "Sin Nombre",
-          style: const TextStyle(
-            fontFamily: 'Cabin',
-            color: Colors.black,
-            fontSize: 30.0,
-            fontWeight: FontWeight.bold,
+        title: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Text(
+            widget.product.name,
+            style: const TextStyle(
+              fontFamily: 'Cabin',
+              color: Colors.black,
+              fontSize: 30.0,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
             ProductImageCarousel(images: images),
+
+            /// Product price + favorite button
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Row(
@@ -134,7 +161,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Show publish date if available
+            if (widget.product.timestamp != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Posted: ${DateFormat.yMMMMd().format(widget.product.timestamp!)}',
+                    style: const TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+
+            /// Category info
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   "Category: ",
@@ -145,17 +192,23 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  widget.product.category,
-                  style: const TextStyle(
-                    fontFamily: 'Cabin',
-                    color: Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    widget.product.category,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Cabin',
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
+
+            /// Buy & Cart buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               child: Column(
@@ -201,27 +254,32 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Seller info
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 16, right: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Sold by",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Sold by",
+                          style: TextStyle(
+                            fontFamily: 'Cabin',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        widget.product.sellerName,
-                        style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
-                      ),
-                    ],
+                        Text(
+                          widget.product.sellerName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
+                        ),
+                      ],
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: () {},
@@ -244,6 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
+
+            /// Description
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Column(

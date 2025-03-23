@@ -1,9 +1,10 @@
-// lib/presentation/views/login_view/signin_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:senemarket/presentation/viewmodels/sign_in_viewmodel.dart';
 import 'package:senemarket/constants.dart';
+import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
 
+/// UI for user sign-in.
+/// Uses SignInViewModel to manage authentication logic and state.
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
 
@@ -45,9 +46,13 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Email and password fields
                 _buildTextField('Uniandes email', _emailController),
                 _buildTextField('Password', _passwordController, obscureText: true),
                 const SizedBox(height: 10),
+
+                // Local and server error messages
                 if (_errorMessage.isNotEmpty)
                   Text(
                     _errorMessage,
@@ -59,6 +64,8 @@ class _SignInPageState extends State<SignInPage> {
                     style: const TextStyle(color: AppColors.primary30, fontSize: 14),
                   ),
                 const SizedBox(height: 10),
+
+                // Sign-in button
                 ElevatedButton(
                   onPressed: isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
@@ -88,6 +95,7 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
+  /// Validates fields and triggers sign-in via ViewModel.
   Future<void> _signIn() async {
     final signInVM = context.read<SignInViewModel>();
     final email = _emailController.text.trim();
@@ -97,17 +105,13 @@ class _SignInPageState extends State<SignInPage> {
       _errorMessage = '';
     });
 
-    // Validaciones
     if (email.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'All fields must be filled out';
-      });
+      setState(() => _errorMessage = 'All fields must be filled out');
       return;
     }
+
     if (!email.endsWith('@uniandes.edu.co')) {
-      setState(() {
-        _errorMessage = 'You must use an @uniandes.edu.co email';
-      });
+      setState(() => _errorMessage = 'You must use an @uniandes.edu.co email');
       return;
     }
 
@@ -117,11 +121,8 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  Widget _buildTextField(
-      String hintText,
-      TextEditingController controller, {
-        bool obscureText = false,
-      }) {
+  /// Builds styled text fields.
+  Widget _buildTextField(String hintText, TextEditingController controller, {bool obscureText = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(

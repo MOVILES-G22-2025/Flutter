@@ -1,10 +1,11 @@
-// lib/presentation/viewmodels/add_product_viewmodel.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:senemarket/domain/repositories/product_repository.dart';
 
-import '../../domain/entities/product.dart';
+import '../../../../domain/entities/product.dart';
+import '../../../../domain/repositories/product_repository.dart';
 
+/// ViewModel used for handling product creation.
+/// It connects the form UI with the ProductRepository.
 class AddProductViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
 
@@ -13,8 +14,7 @@ class AddProductViewModel extends ChangeNotifier {
 
   AddProductViewModel(this._productRepository);
 
-// Ejemplo de viewmodel/add_product_viewmodel.dart
-
+  /// Adds a new product with images and details provided from the form.
   Future<void> addProduct({
     required List<XFile?> images,
     required String name,
@@ -24,30 +24,28 @@ class AddProductViewModel extends ChangeNotifier {
   }) async {
     isLoading = true;
     errorMessage = null;
-    notifyListeners();
+    notifyListeners(); // Notifies UI to show loading indicator
 
     try {
-      // 1. Crear la entidad de dominio
+      // Create a new product entity with empty id/image/seller (filled later)
       final product = Product(
-        id: '', // Se asignará en Firestore
+        id: '', // Will be generated in the backend
         name: name,
         description: description,
         category: category,
         price: price,
-        imageUrls: [],
-        sellerName: '',
+        imageUrls: [], // Uploaded later
+        sellerName: '', // Retrieved from backend
         favoritedBy: [],
       );
 
-      // 2. Llamar al repo con la entidad
+      // Send product data to repository for uploading
       await _productRepository.addProduct(images: images, product: product);
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = e.toString(); // Store error to display in UI
     }
 
     isLoading = false;
-    notifyListeners();
+    notifyListeners(); // Updates UI once done
   }
-
-
 }

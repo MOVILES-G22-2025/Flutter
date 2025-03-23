@@ -1,15 +1,17 @@
-// lib/presentation/views/product_view/add_product_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:senemarket/presentation/viewmodels/add_product_viewmodel.dart';
-import 'package:senemarket/presentation/widgets/custom_image_picker.dart';
-import 'package:senemarket/presentation/widgets/custom_textfield.dart';
-import 'package:senemarket/presentation/widgets/custom_dropdown.dart';
-import 'package:senemarket/common/navigation_bar.dart';
+
+import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/constants.dart' as constants;
 
+import 'viewmodel/add_product_viewmodel.dart';
+
+/// This page allows the user to add a new product to the marketplace.
+/// It includes form fields for product name, price, description, category, and images.
 class AddProductPage extends StatefulWidget {
   const AddProductPage({Key? key}) : super(key: key);
 
@@ -30,7 +32,7 @@ class _AddProductPageState extends State<AddProductPage> {
   String? _selectedCategory;
   bool _isFormValid = false;
 
-  // Valida que todos los campos estén llenos y haya al menos 1 imagen
+  /// Validates that all required fields are filled and at least one image is added.
   void _validateForm() {
     setState(() {
       _isFormValid = _images.isNotEmpty &&
@@ -41,6 +43,7 @@ class _AddProductPageState extends State<AddProductPage> {
     });
   }
 
+  /// Picks an image from the camera, up to 5 allowed.
   Future<void> _pickImageFromCamera() async {
     if (_images.length >= 5) {
       _showSnackBar("You can only upload up to 5 images");
@@ -55,6 +58,7 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
+  /// Picks an image from the gallery, up to 5 allowed.
   Future<void> _pickImageFromGallery() async {
     if (_images.length >= 5) {
       _showSnackBar("You can only upload up to 5 images");
@@ -69,18 +73,20 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
+  /// Displays a simple snackbar message.
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
 
+  /// Submits the form and uploads the product.
   Future<void> _saveProduct() async {
     final addProductVM = context.read<AddProductViewModel>();
 
     if (_isFormValid) {
       try {
-        // Muestra diálogo de carga
+        // Show loading dialog
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -90,16 +96,14 @@ class _AddProductPageState extends State<AddProductPage> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text("Publicando producto..."),
+                Text("Publishing product..."),
               ],
             ),
           ),
         );
 
-        // Convertimos el texto del precio a double
         final parsedPrice = double.tryParse(_priceController.text) ?? 0.0;
 
-        // Llamamos al ViewModel
         await addProductVM.addProduct(
           images: _images,
           name: _nameController.text,
@@ -108,31 +112,45 @@ class _AddProductPageState extends State<AddProductPage> {
           price: parsedPrice,
         );
 
-        // Cerrar el diálogo
-        Navigator.pop(context);
+        Navigator.pop(context); // Close loading dialog
 
-        // Validar si hubo error en el ViewModel
         if (addProductVM.errorMessage != null && addProductVM.errorMessage!.isNotEmpty) {
           _showSnackBar(addProductVM.errorMessage!);
         } else {
           Navigator.pushReplacementNamed(context, '/home');
         }
       } catch (e) {
-        Navigator.pop(context); // cierra el diálogo
-        _showSnackBar('Error al publicar el producto: $e');
+        Navigator.pop(context);
+        _showSnackBar('Error while publishing the product: $e');
       }
     } else {
       _showSnackBar('Please fill in all the fields');
     }
   }
 
+  /// Handles bottom navigation bar interactions.
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Maneja la navegación en el Bottom Nav
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        break; // Already on AddProduct
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
   }
 
+  /// UI Build method for the product form.
   @override
   Widget build(BuildContext context) {
     final addProductVM = context.watch<AddProductViewModel>();
@@ -141,6 +159,7 @@ class _AddProductPageState extends State<AddProductPage> {
     return Scaffold(
       backgroundColor: constants.AppColors.primary50,
       appBar: AppBar(
+        automaticallyImplyLeading: false, // No back button
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
@@ -236,7 +255,6 @@ class _AddProductPageState extends State<AddProductPage> {
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
       ),
     );
   }
