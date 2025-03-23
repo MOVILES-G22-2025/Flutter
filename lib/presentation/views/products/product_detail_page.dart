@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/common/navigation_bar.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/domain/entities/product.dart';
-import 'package:senemarket/presentation/widgets/product_image_carousel.dart';
+import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
+
+import '../../widgets/global/navigation_bar.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -69,9 +70,30 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         await _userRepo.removeFavorite(productId);
         await _productRepo.removeProductFavorite(userId: userId, productId: productId);
       }
-      print("Favorites updated successfully.");
     } catch (e) {
       print("Error updating favorite: $e");
+    }
+  }
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
     }
   }
 
@@ -86,23 +108,21 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
-        title: Text(
-          widget.product.name.isNotEmpty ? widget.product.name : "Sin Nombre",
-          style: const TextStyle(
-            fontFamily: 'Cabin',
-            color: Colors.black,
-            fontSize: 30.0,
-            fontWeight: FontWeight.bold,
+        title: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Text(
+            widget.product.name,
+            style: const TextStyle(
+              fontFamily: 'Cabin',
+              color: Colors.black,
+              fontSize: 30.0,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -135,6 +155,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   "Category: ",
@@ -145,13 +166,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  widget.product.category,
-                  style: const TextStyle(
-                    fontFamily: 'Cabin',
-                    color: Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    widget.product.category,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Cabin',
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -206,22 +231,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Sold by",
-                        style: TextStyle(
-                          fontFamily: 'Cabin',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Sold by",
+                          style: TextStyle(
+                            fontFamily: 'Cabin',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        widget.product.sellerName,
-                        style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
-                      ),
-                    ],
+                        Text(
+                          widget.product.sellerName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cabin', fontSize: 20),
+                        ),
+                      ],
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: () {},

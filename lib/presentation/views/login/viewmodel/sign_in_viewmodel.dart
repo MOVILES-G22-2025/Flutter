@@ -1,6 +1,6 @@
-// lib/presentation/viewmodels/sign_in_viewmodel.dart
-import 'package:flutter/material.dart';
-import 'package:senemarket/domain/repositories/auth_repository.dart';
+import 'package:flutter/cupertino.dart';
+
+import '../../../../domain/repositories/auth_repository.dart';
 
 class SignInViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;

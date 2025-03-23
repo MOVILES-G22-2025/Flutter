@@ -1,5 +1,6 @@
-// lib/data/dto/product_dto.dart
+// lib/data/models/product_dto.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:algolia/algolia.dart';
 
@@ -25,7 +26,7 @@ class ProductDTO {
   });
 
   // -----------------------------
-  // Firebase mapeo
+  // Firebase ↔ DTO
   // -----------------------------
   factory ProductDTO.fromFirestore(String docId, Map<String, dynamic> map) {
     return ProductDTO(
@@ -49,12 +50,11 @@ class ProductDTO {
       'imageUrls': imageUrls,
       'sellerName': sellerName,
       'favoritedBy': favoritedBy,
-      // 'timestamp' lo puedes añadir fuera si gustas
     };
   }
 
   // -----------------------------
-  // Algolia mapeo
+  // Algolia ↔ DTO
   // -----------------------------
   factory ProductDTO.fromAlgoliaHit(AlgoliaObjectSnapshot hit) {
     final map = Map<String, dynamic>.from(hit.data);
@@ -116,4 +116,19 @@ class ProductDTO {
     }
     return [];
   }
+
+  factory ProductDTO.fromDocumentSnapshot(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ProductDTO(
+      id: doc.id,
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      category: data['category'] ?? '',
+      price: double.tryParse(data['price'].toString()) ?? 0.0,
+      imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      sellerName: data['sellerName'] ?? '',
+      favoritedBy: [],
+    );
+  }
+
 }

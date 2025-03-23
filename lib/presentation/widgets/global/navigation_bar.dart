@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import '../constants.dart';
+import 'package:senemarket/constants.dart';
 
 class NavigationBarApp extends StatefulWidget {
-  final ValueChanged<int> onItemTapped;
   final int selectedIndex;
 
   const NavigationBarApp({
-    super.key,
-    required this.onItemTapped,
+    Key? key,
     required this.selectedIndex,
-  });
+  }) : super(key: key);
 
   @override
   _NavigationBarAppState createState() => _NavigationBarAppState();
@@ -27,9 +25,38 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
     return (index >= 0 && index < 5) ? index : 0;
   }
 
+  void _navigateToPage(int index) {
+    if (index == widget.selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
+      currentIndex: _validateIndex(widget.selectedIndex),
+      onTap: _navigateToPage,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: AppColors.primary40,
+      selectedItemColor: AppColors.primary0,
+      selectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
+      unselectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
       items: <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: _buildIcon(Icons.home_outlined, 0),
@@ -52,44 +79,7 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
           label: 'Profile',
         ),
       ],
-      currentIndex: _validateIndex(widget.selectedIndex),
-      onTap: (index) {
-        _navigateToPage(index, context);
-      },
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: AppColors.primary40,
-      selectedItemColor: AppColors.primary0,
-      selectedLabelStyle: const TextStyle(
-        fontFamily: 'Cabin',
-        fontSize: 12,
-      ),
-      unselectedLabelStyle: const TextStyle(
-        fontFamily: 'Cabin',
-        fontSize: 12,
-      ),
     );
-  }
-
-  void _navigateToPage(int index, BuildContext context) {
-    if (index == widget.selectedIndex) return;
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/home');
-        break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/chats');
-        break;
-      case 2:
-        Navigator.pushReplacementNamed(context, '/add_product');
-        break;
-      case 3:
-        Navigator.pushReplacementNamed(context, '/favorites');
-        break;
-      case 4:
-        Navigator.pushReplacementNamed(context, '/profile');
-        break;
-    }
   }
 
   Widget _buildIcon(IconData icon, int index) {
@@ -97,12 +87,10 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
     IconData displayIcon = isSelected && _filledIconMapping.containsKey(icon)
         ? _filledIconMapping[icon]!
         : icon;
+
     Color iconColor = isSelected ? AppColors.primary30 : AppColors.primary0;
 
-    return Icon(
-      displayIcon,
-      color: iconColor,
-    );
+    return Icon(displayIcon, color: iconColor);
   }
 
   Widget _buildStaticSellIcon(IconData icon, String label, int index) {
@@ -113,25 +101,15 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
       duration: const Duration(milliseconds: 200),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 14.0),
-        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.primary50,
-          shape: BoxShape.rectangle,
           borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(
-            color: AppColors.primary30,
-            width: 3,
-          ),
+          border: Border.all(color: AppColors.primary30, width: 3),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: AppColors.primary0,
-              size: 28,
-            ),
+            Icon(icon, color: AppColors.primary0, size: 28),
             const SizedBox(height: 3),
             Text(
               label,

@@ -3,17 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
 
 // Widgets y barras
-import 'package:senemarket/common/navigation_bar.dart';
-import 'package:senemarket/common/search_bar.dart' as searchBar;
-import 'package:senemarket/common/filter_bar.dart';
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+import 'package:senemarket/presentation/widgets/global/search_bar.dart' as searchBar;
+import 'package:senemarket/presentation/widgets/global/filter_bar.dart';
 
 // ViewModel para la búsqueda
-import 'package:senemarket/presentation/viewmodels/product_search_viewmodel.dart';
 
 // Tarjeta de producto que ahora espera un `Product`
-import 'package:senemarket/presentation/views/product_view/product_card.dart';
+import 'package:senemarket/presentation/views/products/widgets/product_card.dart';
 
 // Constantes (categorías, colores, etc.)
 import 'package:senemarket/constants.dart' as constants;
@@ -67,10 +67,27 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
   }
+
 
   /// Incrementa y persiste el contador de clics de una categoría.
   void _incrementCategoryClick(String category) async {
@@ -212,7 +229,6 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
       ),
     );
   }

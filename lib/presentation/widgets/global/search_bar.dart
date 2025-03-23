@@ -1,6 +1,6 @@
+// lib/presentation/widgets/global/search_bar.dart
 import 'package:flutter/material.dart';
-
-import '../constants.dart';
+import '../../../constants.dart';
 
 class SearchBar extends StatefulWidget {
   final String hintText;
@@ -10,7 +10,6 @@ class SearchBar extends StatefulWidget {
     Key? key,
     this.hintText = 'Search...',
     this.onChanged,
-
   }) : super(key: key);
 
   @override
@@ -51,7 +50,6 @@ class _SearchBarState extends State<SearchBar> {
           hintText: widget.hintText,
           filled: _isFocused,
           fillColor: _isFocused ? AppColors.primary20 : Colors.transparent,
-          // Borde normal
           enabledBorder: OutlineInputBorder(
             borderSide: const BorderSide(color: Colors.grey),
             borderRadius: BorderRadius.circular(30.0),
@@ -63,7 +61,6 @@ class _SearchBarState extends State<SearchBar> {
             ),
             borderRadius: BorderRadius.circular(100.0),
           ),
-          // Icono de lupa a la derecha
           suffixIcon: const Icon(Icons.search),
         ),
       ),

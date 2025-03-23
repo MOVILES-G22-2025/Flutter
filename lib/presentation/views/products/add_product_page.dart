@@ -3,12 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:senemarket/presentation/viewmodels/add_product_viewmodel.dart';
-import 'package:senemarket/presentation/widgets/custom_image_picker.dart';
-import 'package:senemarket/presentation/widgets/custom_textfield.dart';
-import 'package:senemarket/presentation/widgets/custom_dropdown.dart';
-import 'package:senemarket/common/navigation_bar.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/constants.dart' as constants;
+
+import 'viewmodel/add_product_viewmodel.dart';
 
 class AddProductPage extends StatefulWidget {
   const AddProductPage({Key? key}) : super(key: key);
@@ -126,11 +127,27 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
+
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Maneja la navegación en el Bottom Nav
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+      // Estás en AddProduct, no hacer nada
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
   }
 
   @override
@@ -236,7 +253,6 @@ class _AddProductPageState extends State<AddProductPage> {
       ),
       bottomNavigationBar: NavigationBarApp(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
       ),
     );
   }

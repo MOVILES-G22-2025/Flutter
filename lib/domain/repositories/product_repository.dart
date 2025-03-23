@@ -1,5 +1,6 @@
-import 'package:image_picker/image_picker.dart';
+// lib/domain/repositories/product_repository.dart
 
+import 'package:image_picker/image_picker.dart';
 import '../entities/product.dart';
 
 abstract class ProductRepository {
@@ -12,13 +13,6 @@ abstract class ProductRepository {
 
   Stream<List<Product>> getProductsStream();
 
-  Future<void> addProductFavorite({
-    required String userId,
-    required String productId,
-  });
 
-  Future<void> removeProductFavorite({
-    required String userId,
-    required String productId,
-  });
 }
+

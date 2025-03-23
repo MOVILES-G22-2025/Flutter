@@ -21,7 +21,6 @@ class Product {
     required this.favoritedBy,
   });
 
-  // Ejemplo de copyWith si deseas modificar campos
   Product copyWith({
     String? id,
     String? name,
@@ -43,4 +42,29 @@ class Product {
       favoritedBy: favoritedBy ?? this.favoritedBy,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is Product &&
+              runtimeType == other.runtimeType &&
+              id == other.id &&
+              name == other.name &&
+              description == other.description &&
+              category == other.category &&
+              price == other.price &&
+              imageUrls.toString() == other.imageUrls.toString() &&
+              sellerName == other.sellerName &&
+              favoritedBy.toString() == other.favoritedBy.toString();
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      description.hashCode ^
+      category.hashCode ^
+      price.hashCode ^
+      imageUrls.hashCode ^
+      sellerName.hashCode ^
+      favoritedBy.hashCode;
 }

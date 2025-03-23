@@ -1,8 +1,7 @@
-// lib/presentation/views/login_view/signin_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:senemarket/presentation/viewmodels/sign_in_viewmodel.dart';
 import 'package:senemarket/constants.dart';
+import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -97,17 +96,13 @@ class _SignInPageState extends State<SignInPage> {
       _errorMessage = '';
     });
 
-    // Validaciones
     if (email.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'All fields must be filled out';
-      });
+      setState(() => _errorMessage = 'All fields must be filled out');
       return;
     }
+
     if (!email.endsWith('@uniandes.edu.co')) {
-      setState(() {
-        _errorMessage = 'You must use an @uniandes.edu.co email';
-      });
+      setState(() => _errorMessage = 'You must use an @uniandes.edu.co email');
       return;
     }
 
@@ -117,11 +112,7 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  Widget _buildTextField(
-      String hintText,
-      TextEditingController controller, {
-        bool obscureText = false,
-      }) {
+  Widget _buildTextField(String hintText, TextEditingController controller, {bool obscureText = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(

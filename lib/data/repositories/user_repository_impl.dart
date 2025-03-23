@@ -1,27 +1,23 @@
 // lib/data/repositories/user_repository_impl.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
+import '../datasources/user_remote_data_source.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
+  final UserRemoteDataSource _remote;
 
   UserRepositoryImpl({
     FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
+    UserRemoteDataSource? remote,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _remote = remote ?? UserRemoteDataSource();
 
   @override
   Future<Map<String, dynamic>?> getUserData() async {
     final user = _auth.currentUser;
     if (user != null) {
-      DocumentSnapshot doc =
-      await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        return doc.data() as Map<String, dynamic>?;
-      }
+      return await _remote.getUserData(user.uid);
     }
     return null;
   }
@@ -30,10 +26,7 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> updateUserData(Map<String, dynamic> data) async {
     final user = _auth.currentUser;
     if (user != null) {
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(data, SetOptions(merge: true));
+      await _remote.updateUserData(user.uid, data);
     }
   }
 
@@ -41,9 +34,7 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> addFavorite(String productId) async {
     final user = _auth.currentUser;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'favorites': FieldValue.arrayUnion([productId])
-      }, SetOptions(merge: true));
+      await _remote.modifyFavorite(uid: user.uid, productId: productId, add: true);
     }
   }
 
@@ -51,9 +42,8 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> removeFavorite(String productId) async {
     final user = _auth.currentUser;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'favorites': FieldValue.arrayRemove([productId])
-      }, SetOptions(merge: true));
+      await _remote.modifyFavorite(uid: user.uid, productId: productId, add: false);
     }
   }
+
 }

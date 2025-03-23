@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/presentation/viewmodels/sign_up_viewmodel.dart';
+
+import 'viewmodel/sign_up_viewmodel.dart';
 
 /// Pantalla para registrar un nuevo usuario.
 /// Usa SignUpViewModel para manejar la lógica de registro.

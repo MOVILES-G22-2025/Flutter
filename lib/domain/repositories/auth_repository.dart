@@ -1,11 +1,5 @@
-// lib/domain/repositories/auth_repository.dart
 abstract class AuthRepository {
-  /// Retorna `null` si inicia sesión con éxito,
-  /// o un mensaje de error en caso de fallo.
   Future<String?> signInWithEmailAndPassword(String email, String password);
-
-  /// Retorna `null` si el registro es exitoso,
-  /// o un mensaje de error en caso de fallo.
   Future<String?> signUpWithEmailAndPassword(
       String email,
       String password,
@@ -13,4 +7,6 @@ abstract class AuthRepository {
       String career,
       String semester,
       );
+  Future<void> signOut();
+  bool get isAuthenticated;
 }

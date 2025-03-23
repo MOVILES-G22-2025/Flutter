@@ -1,14 +1,22 @@
 // lib/data/repositories/auth_repository_impl.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:senemarket/domain/repositories/auth_repository.dart';
-import '../services/auth_service.dart'; // singleton aquí
+import '../datasources/auth_remote_data_source.dart';
+import '../datasources/user_remote_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final AuthService _authService = AuthService(); // Uso del singleton
+  final AuthRemoteDataSource _authDataSource;
+  final UserRemoteDataSource _userDataSource;
+
+  AuthRepositoryImpl({
+    AuthRemoteDataSource? authDataSource,
+    UserRemoteDataSource? userDataSource,
+  })  : _authDataSource = authDataSource ?? AuthRemoteDataSource(),
+        _userDataSource = userDataSource ?? UserRemoteDataSource();
 
   @override
   Future<String?> signInWithEmailAndPassword(String email, String password) async {
-    final user = await _authService.signInWithEmail(email, password);
+    final user = await _authDataSource.signInWithEmail(email, password);
     if (user == null) {
       return 'Incorrect credentials.';
     }
@@ -23,19 +31,27 @@ class AuthRepositoryImpl implements AuthRepository {
       String career,
       String semester,
       ) async {
-    final user = await _authService.signUpWithEmail(email, password);
+    final user = await _authDataSource.signUpWithEmail(email, password);
     if (user == null) {
       return 'Registration failed.';
     }
 
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'name': name,
-      'career': career,
-      'semester': semester,
-      'email': email,
-      'favorites': [],
-    });
+    await _userDataSource.createUserDocument(
+      uid: user.uid,
+      name: name,
+      career: career,
+      semester: semester,
+      email: email,
+    );
 
     return null;
   }
+
+  @override
+  Future<void> signOut() async {
+    await _authDataSource.signOut();
+  }
+
+  @override
+  bool get isAuthenticated => _authDataSource.isAuthenticated;
 }

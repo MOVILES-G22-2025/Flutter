@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'full_screen_image_page.dart';
+import '../../../widgets/global/full_screen_image_page.dart';
 
 class ProductImageCarousel extends StatefulWidget {
   final List<String> images;

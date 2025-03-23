@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/domain/entities/product.dart';
-import 'package:senemarket/presentation/views/product_view/product_detail_page.dart';
+import 'package:senemarket/presentation/views/products/product_detail_page.dart';
 
 /// Tarjeta para mostrar un [Product].
 ///

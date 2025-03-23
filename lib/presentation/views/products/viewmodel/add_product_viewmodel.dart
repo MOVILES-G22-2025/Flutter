@@ -1,9 +1,8 @@
-// lib/presentation/viewmodels/add_product_viewmodel.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:senemarket/domain/repositories/product_repository.dart';
 
-import '../../domain/entities/product.dart';
+import '../../../../domain/entities/product.dart';
+import '../../../../domain/repositories/product_repository.dart';
 
 class AddProductViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
@@ -12,8 +11,6 @@ class AddProductViewModel extends ChangeNotifier {
   String? errorMessage;
 
   AddProductViewModel(this._productRepository);
-
-// Ejemplo de viewmodel/add_product_viewmodel.dart
 
   Future<void> addProduct({
     required List<XFile?> images,
@@ -27,9 +24,8 @@ class AddProductViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Crear la entidad de dominio
       final product = Product(
-        id: '', // Se asignará en Firestore
+        id: '',
         name: name,
         description: description,
         category: category,
@@ -39,7 +35,6 @@ class AddProductViewModel extends ChangeNotifier {
         favoritedBy: [],
       );
 
-      // 2. Llamar al repo con la entidad
       await _productRepository.addProduct(images: images, product: product);
     } catch (e) {
       errorMessage = e.toString();
@@ -48,6 +43,4 @@ class AddProductViewModel extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
   }
-
-
 }
