@@ -29,6 +29,13 @@ class ProductSearchViewModel extends ChangeNotifier {
     search(query);     // Run the actual search
   }
 
+  /// Clears the search query and results.
+  void clearSearch() {
+    _searchQuery = '';
+    _results = [];
+    notifyListeners();
+  }
+
   /// Executes a search using the repository (Algolia).
   /// Filters out products created by the current user.
   Future<void> search(String query) async {
@@ -49,7 +56,7 @@ class ProductSearchViewModel extends ChangeNotifier {
       print(userId);
 
     } catch (e) {
-      print("aaa");
+      print("Error: $e");
       _errorMessage = e.toString();
       _results = [];
     }
