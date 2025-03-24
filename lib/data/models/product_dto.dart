@@ -14,6 +14,7 @@ class ProductDTO {
   final String sellerName;
   final List<String> favoritedBy;
   final DateTime? timestamp;
+  final String userId;
 
   const ProductDTO({
     required this.id,
@@ -25,6 +26,7 @@ class ProductDTO {
     required this.sellerName,
     required this.favoritedBy,
     this.timestamp,
+    required this.userId,
   });
 
   // -----------------------------
@@ -42,6 +44,7 @@ class ProductDTO {
       sellerName: map['sellerName'] ?? '',
       favoritedBy: _toStringList(map['favoritedBy']),
       timestamp: (map['timestamp'] as Timestamp?)?.toDate(),
+      userId: map['userId'] ?? '',
     );
   }
 
@@ -55,6 +58,8 @@ class ProductDTO {
       'imageUrls': imageUrls,
       'sellerName': sellerName,
       'favoritedBy': favoritedBy,
+      'timestamp': timestamp,
+      'userId': userId,
     };
   }
 
@@ -73,6 +78,7 @@ class ProductDTO {
       imageUrls: _toStringList(map['imageUrls']),
       sellerName: map['sellerName'] ?? '',
       favoritedBy: _toStringList(map['favoritedBy']),
+      userId: map['userId'] ?? '',
     );
   }
 
@@ -91,6 +97,7 @@ class ProductDTO {
       sellerName: sellerName,
       favoritedBy: favoritedBy,
       timestamp: timestamp,
+      userId: userId,
     );
   }
 
@@ -105,6 +112,8 @@ class ProductDTO {
       imageUrls: product.imageUrls,
       sellerName: product.sellerName,
       favoritedBy: product.favoritedBy,
+      timestamp: product.timestamp,
+      userId: product.userId,
     );
   }
 
@@ -142,6 +151,7 @@ class ProductDTO {
       sellerName: data['sellerName'] ?? '',
       favoritedBy: [],
       timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
+      userId: data['userId'] ?? '',
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/cupertino.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/repositories/product_repository.dart';
 
@@ -27,16 +29,34 @@ class ProductSearchViewModel extends ChangeNotifier {
     search(query);     // Run the actual search
   }
 
+  /// Clears the search query and results.
+  void clearSearch() {
+    _searchQuery = '';
+    _results = [];
+    notifyListeners();
+  }
+
   /// Executes a search using the repository (Algolia).
+  /// Filters out products created by the current user.
   Future<void> search(String query) async {
     _isLoading = true;
     _errorMessage = '';
     notifyListeners(); // UI can show loading indicator
 
     try {
-      _results = await _repository.searchProducts(query);
-      print("Resultados de Algolia para '$query': $_results");
+      final allResults = await _repository.searchProducts(query);
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      // Filter out products created by the current user
+      _results = userId == null
+          ? allResults
+          : allResults.where((product) => product.userId != userId).toList();
+
+      print("Filtered Algolia results for '$query': $_results");
+      print(userId);
+
     } catch (e) {
+      print("Error: $e");
       _errorMessage = e.toString();
       _results = [];
     }

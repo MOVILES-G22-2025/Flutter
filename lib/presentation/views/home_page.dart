@@ -105,10 +105,13 @@ class _HomePageState extends State<HomePage> {
         ? searchViewModel.searchResults
         : baseProducts;
 
+    // Exclude products created by the current user
+    final visibleProducts = products.where((product) => product.userId != userId).toList();
+
     // Filter by selected categories
     List<Product> filtered = _selectedCategories.isEmpty
-        ? products
-        : products.where((product) {
+        ? visibleProducts
+        : visibleProducts.where((product) {
       final productCategory = product.category.toLowerCase();
       return _selectedCategories.any((selected) =>
           productCategory.contains(selected.toLowerCase()));
