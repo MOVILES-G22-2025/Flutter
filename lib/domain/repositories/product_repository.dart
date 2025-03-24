@@ -18,4 +18,15 @@ abstract class ProductRepository {
   /// Provides a real-time stream of all products.
   /// Useful for home page or product listings.
   Stream<List<Product>> getProductsStream();
+
+  /// Updates an existing product with new data and images.
+  Future<void> updateProduct({
+    required String productId,
+    required Product updatedProduct,
+    required List<XFile?> newImages,
+    required List<String> imagesToDelete,
+  });
+
+  /// Deletes a product from the database.
+  Future<void> deleteProduct(String productId);
 }

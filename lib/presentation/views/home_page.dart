@@ -42,7 +42,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserClicks(); // Load how many times each category was clicked
+
+    // Reinicia el query de búsqueda cuando se entra al Home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final searchVM = context.read<ProductSearchViewModel>();
+      searchVM.updateSearchQuery('');
+    });
+
+    _loadUserClicks();
   }
 
   /// Load category click data from Firestore

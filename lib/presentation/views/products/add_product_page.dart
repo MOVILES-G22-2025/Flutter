@@ -192,13 +192,13 @@ class _AddProductPageState extends State<AddProductPage> {
                     image: _images,
                   ),
                   CustomTextField(
-                    hintText: 'Name',
+                    label: 'Name',
                     controller: _nameController,
                     onChanged: (_) => _validateForm(),
                   ),
                   const SizedBox(height: 12),
                   CustomTextField(
-                    hintText: 'Description',
+                    label: 'Description',
                     controller: _descriptionController,
                     onChanged: (_) => _validateForm(),
                   ),
@@ -216,7 +216,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 12),
                   CustomTextField(
-                    hintText: 'Price',
+                    label: 'Price',
                     controller: _priceController,
                     onChanged: (_) => _validateForm(),
                   ),

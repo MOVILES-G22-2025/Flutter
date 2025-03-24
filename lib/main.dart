@@ -20,7 +20,8 @@ import 'package:senemarket/presentation/views/login/login_page.dart';
 import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/login/signin_page.dart';
 import 'package:senemarket/presentation/views/login/signup_page.dart';
-import 'package:senemarket/presentation/views/profile/my_products_page.dart';
+import 'package:senemarket/presentation/views/products/edit_product_page.dart';
+import 'package:senemarket/presentation/views/products/my_products_page.dart';
 import 'package:senemarket/presentation/views/profile/profile_page.dart';
 import 'package:senemarket/presentation/views/splash/splash_screen.dart';
 
@@ -90,6 +91,7 @@ class SenemarketApp extends StatelessWidget {
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
           '/my_products': (_) => const MyProductsPage(),
+
         },
       ),
     );

@@ -1,15 +1,14 @@
-// lib/presentation/widgets/custom_textfield.dart
 import 'package:flutter/material.dart';
 import 'package:senemarket/constants.dart';
 
 class CustomTextField extends StatelessWidget {
-  final String hintText;
+  final String label;
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
 
   const CustomTextField({
     Key? key,
-    required this.hintText,
+    required this.label,
     required this.controller,
     this.onChanged,
   }) : super(key: key);
@@ -27,7 +26,8 @@ class CustomTextField extends StatelessWidget {
           color: AppColors.primary0,
         ),
         decoration: InputDecoration(
-          hintText: hintText,
+          labelText: label, // ✅ Ahora usamos label en lugar de hint
+          floatingLabelBehavior: FloatingLabelBehavior.auto, // Se muestra arriba cuando hay texto o foco
           filled: true,
           fillColor: AppColors.secondary60,
           border: OutlineInputBorder(
@@ -51,8 +51,10 @@ class CustomTextField extends StatelessWidget {
               width: 2.0,
             ),
           ),
-          contentPadding:
-          const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 12.0,
+            horizontal: 16.0,
+          ),
         ),
       ),
     );

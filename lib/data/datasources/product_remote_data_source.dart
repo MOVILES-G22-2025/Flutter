@@ -70,4 +70,26 @@ class ProductRemoteDataSource {
           : FieldValue.arrayRemove([userId])
     }, SetOptions(merge: true));
   }
+
+  /// Deletes a product from Firestore by its ID.
+  Future<void> deleteProduct(String productId) async {
+    await _db.collection('products').doc(productId).delete();
+  }
+
+  /// Updates a product with new data and images.
+  Future<void> updateProduct(String productId, ProductDTO dto) async {
+    final map = dto.toFirestore();
+    await _db.collection('products').doc(productId).update(map);
+  }
+
+  /// Deletes an image from Firebase Storage by its URL.
+  Future<void> deleteImageByUrl(String imageUrl) async {
+    try {
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+    } catch (e) {
+      print('Error deleting image from Firebase Storage: $e');
+    }
+  }
+
 }

@@ -49,74 +49,100 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: _validateIndex(widget.selectedIndex),
-      onTap: _navigateToPage,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: AppColors.primary40,
-      selectedItemColor: AppColors.primary0,
-      selectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
-      unselectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
-      items: <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: _buildIcon(Icons.home_outlined, 0),
-          label: 'Home',
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(30),
+        topRight: Radius.circular(30),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.primary40,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -1),
+            ),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: _buildIcon(Icons.chat_bubble_outline_rounded, 1),
-          label: 'Chats',
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
+            elevation: 0,
+            currentIndex: _validateIndex(widget.selectedIndex),
+            onTap: _navigateToPage,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.transparent,
+            selectedItemColor: AppColors.primary30,
+            unselectedItemColor: AppColors.primary0,
+            selectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
+            items: <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: _buildIcon(Icons.home_outlined, 0),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildIcon(Icons.chat_bubble_outline_rounded, 1),
+                label: 'Chats',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildSellIcon(2),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildIcon(Icons.favorite_border, 3),
+                label: 'Favorites',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildIcon(Icons.person_outline, 4),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: _buildStaticSellIcon(Icons.file_upload_outlined, 'Sell', 2),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: _buildIcon(Icons.favorite_border, 3),
-          label: 'Favorites',
-        ),
-        BottomNavigationBarItem(
-          icon: _buildIcon(Icons.person_outline, 4),
-          label: 'Profile',
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildIcon(IconData icon, int index) {
     bool isSelected = widget.selectedIndex == index;
-    IconData displayIcon = isSelected && _filledIconMapping.containsKey(icon)
+    IconData finalIcon = isSelected && _filledIconMapping.containsKey(icon)
         ? _filledIconMapping[icon]!
         : icon;
 
-    Color iconColor = isSelected ? AppColors.primary30 : AppColors.primary0;
-
-    return Icon(displayIcon, color: iconColor);
+    return Icon(
+      finalIcon,
+      size: 26,
+      color: isSelected ? AppColors.primary30 : AppColors.primary0,
+    );
   }
 
-  Widget _buildStaticSellIcon(IconData icon, String label, int index) {
+  Widget _buildSellIcon(int index) {
     bool isSelected = widget.selectedIndex == index;
 
     return AnimatedScale(
-      scale: isSelected ? 1.05 : 1.0,
+      scale: isSelected ? 1.1 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 14.0),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 14.0),
         decoration: BoxDecoration(
           color: AppColors.primary50,
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: AppColors.primary30, width: 3),
+          borderRadius: BorderRadius.circular(18.0),
+          border: Border.all(color: AppColors.primary30, width: 2),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.primary0, size: 28),
-            const SizedBox(height: 3),
+          children: const [
+            Icon(Icons.file_upload_outlined, color: AppColors.primary0, size: 26),
+            SizedBox(height: 2),
             Text(
-              label,
-              style: const TextStyle(
+              'Sell',
+              style: TextStyle(
                 fontFamily: 'Cabin',
                 color: AppColors.primary0,
                 fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
