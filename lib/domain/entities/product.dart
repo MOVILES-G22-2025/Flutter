@@ -10,6 +10,7 @@ class Product {
   final String sellerName;
   final List<String> favoritedBy;
   final DateTime? timestamp;
+  final String userId;
 
   const Product({
     required this.id,
@@ -21,6 +22,8 @@ class Product {
     required this.sellerName,
     required this.favoritedBy,
     this.timestamp,
+    required this.userId,
+
   });
 
   /// Creates a copy of the product with optional field overrides.
@@ -34,6 +37,7 @@ class Product {
     String? sellerName,
     List<String>? favoritedBy,
     DateTime? timestamp,
+    String? userId,
   }) {
     return Product(
       id: id ?? this.id,
@@ -45,6 +49,7 @@ class Product {
       sellerName: sellerName ?? this.sellerName,
       favoritedBy: favoritedBy ?? this.favoritedBy,
       timestamp: timestamp ?? this.timestamp,
+      userId: userId ?? this.userId,
     );
   }
 
@@ -62,7 +67,8 @@ class Product {
               imageUrls.toString() == other.imageUrls.toString() &&
               sellerName == other.sellerName &&
               favoritedBy.toString() == other.favoritedBy.toString() &&
-              timestamp == other.timestamp;
+              timestamp == other.timestamp &&
+              userId == other.userId;
 
   /// Custom hashCode to support equality.
   @override
@@ -75,5 +81,6 @@ class Product {
       imageUrls.hashCode ^
       sellerName.hashCode ^
       favoritedBy.hashCode ^
-      timestamp.hashCode;
+      timestamp.hashCode ^
+      userId.hashCode;
 }

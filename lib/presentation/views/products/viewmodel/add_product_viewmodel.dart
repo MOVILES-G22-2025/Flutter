@@ -37,6 +37,7 @@ class AddProductViewModel extends ChangeNotifier {
         imageUrls: [], // Uploaded later
         sellerName: '', // Retrieved from backend
         favoritedBy: [],
+        userId: '', // Retrieved from backend
       );
 
       // Send product data to repository for uploading

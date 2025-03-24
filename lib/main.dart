@@ -20,6 +20,8 @@ import 'package:senemarket/presentation/views/login/login_page.dart';
 import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/login/signin_page.dart';
 import 'package:senemarket/presentation/views/login/signup_page.dart';
+import 'package:senemarket/presentation/views/profile/my_products_page.dart';
+import 'package:senemarket/presentation/views/profile/profile_page.dart';
 import 'package:senemarket/presentation/views/splash/splash_screen.dart';
 
 import 'package:senemarket/presentation/views/products/viewmodel/add_product_viewmodel.dart';
@@ -57,6 +59,7 @@ class SenemarketApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AddProductViewModel(context.read<ProductRepository>())),
         ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
+
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         initialRoute: '/splash',
@@ -85,6 +88,8 @@ class SenemarketApp extends StatelessWidget {
           '/home': (_) => const HomePage(),
           '/add_product': (_) => const AddProductPage(),
           '/favorites': (_) => const FavoritesPage(),
+          '/profile': (_) => const ProfilePage(),
+          '/my_products': (_) => const MyProductsPage(),
         },
       ),
     );

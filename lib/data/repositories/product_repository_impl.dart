@@ -49,7 +49,7 @@ class ProductRepositoryImpl implements ProductRepository {
     if (imageUrls.isEmpty) throw Exception("No images uploaded");
 
     final sellerName = await _remoteDataSource.getSellerName(user.uid);
-    final updatedProduct = product.copyWith(imageUrls: imageUrls, sellerName: sellerName);
+    final updatedProduct = product.copyWith(imageUrls: imageUrls, sellerName: sellerName, userId: user.uid);
     final dto = ProductDTO.fromDomain(updatedProduct);
 
     await _remoteDataSource.saveProduct(user.uid, dto);
