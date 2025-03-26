@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../constants.dart';
-import '../../../presentation/views/products/viewmodel/product_search_viewmodel.dart';
 
 class SearchBar extends StatefulWidget {
   final String hintText;
   final ValueChanged<String>? onChanged;
+  final TextEditingController? controller;
 
   const SearchBar({
     Key? key,
     this.hintText = 'Search...',
     this.onChanged,
+    this.controller,
   }) : super(key: key);
 
   @override
@@ -19,12 +19,13 @@ class SearchBar extends StatefulWidget {
 
 class _SearchBarState extends State<SearchBar> {
   final FocusNode _focusNode = FocusNode();
-  final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _internalController;
   bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
+    _internalController = widget.controller ?? TextEditingController();
 
     _focusNode.addListener(() {
       setState(() {
@@ -36,22 +37,23 @@ class _SearchBarState extends State<SearchBar> {
   @override
   void dispose() {
     _focusNode.dispose();
-    _controller.dispose();
+    if (widget.controller == null) {
+      _internalController.dispose();
+    }
     super.dispose();
   }
 
-  void _clearText(BuildContext context) {
-    _controller.clear();
+  void _clearText() {
+    _internalController.clear();
     widget.onChanged?.call('');
-    context.read<ProductSearchViewModel>().clearSearch(); // <- clave
-    FocusScope.of(context).unfocus(); // cierra el teclado si está activo
+    FocusScope.of(context).requestFocus(_focusNode); // Retiene el teclado
   }
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: _internalController,
       focusNode: _focusNode,
-      controller: _controller,
       onChanged: widget.onChanged,
       decoration: InputDecoration(
         hintText: widget.hintText,
@@ -62,17 +64,13 @@ class _SearchBarState extends State<SearchBar> {
           borderRadius: BorderRadius.circular(30.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(
-            color: AppColors.primary20,
-            width: 2.0,
-          ),
+          borderSide: const BorderSide(color: AppColors.primary20, width: 2.0),
           borderRadius: BorderRadius.circular(100.0),
         ),
-        // Muestra una "X" si hay texto, si no muestra el ícono de búsqueda
-        suffixIcon: _controller.text.isNotEmpty
+        suffixIcon: _internalController.text.isNotEmpty
             ? IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => _clearText(context),
+          onPressed: _clearText,
         )
             : const Icon(Icons.search),
       ),

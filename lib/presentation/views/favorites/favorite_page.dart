@@ -5,9 +5,8 @@ import '../../widgets/global/navigation_bar.dart';
 import 'viewmodel/favorites_viewmodel.dart';
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_card.dart';
+import 'package:senemarket/presentation/widgets/global/search_bar.dart' as searchBar;
 
-/// UI page that displays the current user's favorite products.
-/// Uses FavoritesViewModel for state and logic.
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({Key? key}) : super(key: key);
 
@@ -17,14 +16,21 @@ class FavoritesPage extends StatefulWidget {
 
 class _FavoritesPageState extends State<FavoritesPage> {
   final int _selectedIndex = 3;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Loads the favorites after the first frame is rendered.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<FavoritesViewModel>(context, listen: false).loadFavorites();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -32,10 +38,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final viewModel = context.watch<FavoritesViewModel>();
     final favorites = viewModel.favorites;
 
+    final filteredFavorites = favorites.where((product) {
+      final query = _searchQuery.toLowerCase();
+      return product.name.toLowerCase().contains(query) ||
+          product.description.toLowerCase().contains(query);
+    }).toList();
+
     return Scaffold(
       backgroundColor: AppColors.primary50,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // No back button
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primary0),
@@ -55,7 +67,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // Sort toggle button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: searchBar.SearchBar(
+              controller: _searchController,
+              hintText: 'Search favorites...',
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Align(
@@ -77,18 +100,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
           ),
-          // Product list
           Expanded(
-            child: favorites.isEmpty
+            child: filteredFavorites.isEmpty
                 ? const Center(
               child: Text(
-                "No favorites yet.",
+                "No favorites found.",
                 style: TextStyle(fontFamily: 'Cabin', fontSize: 16),
               ),
             )
                 : GridView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: favorites.length,
+              itemCount: filteredFavorites.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
@@ -96,7 +118,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 childAspectRatio: 0.75,
               ),
               itemBuilder: (context, index) {
-                return ProductCard(product: favorites[index]);
+                return ProductCard(product: filteredFavorites[index]);
               },
             ),
           ),
