@@ -74,4 +74,42 @@ class ProductRepositoryImpl implements ProductRepository {
   Future<void> removeProductFavorite({required String userId, required String productId}) {
     return _remoteDataSource.updateFavorites(productId, userId, false);
   }
+
+  @override
+  Future<void> deleteProduct(String productId) {
+    return _remoteDataSource.deleteProduct(productId);
+  }
+
+  @override
+  Future<void> updateProduct({
+    required String productId,
+    required Product updatedProduct,
+    required List<XFile?> newImages,
+    required List<String> imagesToDelete,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not logged in");
+
+    // 1. Subir nuevas imágenes
+    final newImageUrls = await _remoteDataSource.uploadImages(newImages);
+
+    // 2. Combinar con las existentes (menos las eliminadas)
+    final updatedImageUrls = List<String>.from(updatedProduct.imageUrls)
+      ..removeWhere((url) => imagesToDelete.contains(url))
+      ..addAll(newImageUrls);
+
+    // 3. Crear DTO actualizado
+    final dto = ProductDTO.fromDomain(
+      updatedProduct.copyWith(imageUrls: updatedImageUrls),
+    );
+
+    // 4. Enviar a Firestore
+    await _remoteDataSource.updateProduct(productId, dto);
+
+    // 5. (Opcional) Eliminar imágenes de Firebase Storage
+    for (final url in imagesToDelete) {
+      await _remoteDataSource.deleteImageByUrl(url);
+    }
+  }
+
 }
