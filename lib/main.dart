@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:senemarket/data/repositories/auth_repository_impl.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
@@ -40,27 +42,76 @@ void main() async {
   runApp(const SenemarketApp());
 }
 
-class SenemarketApp extends StatelessWidget {
+class SenemarketApp extends StatefulWidget {
   const SenemarketApp({Key? key}) : super(key: key);
+
+  @override
+  _SenemarketAppState createState() => _SenemarketAppState();
+}
+
+class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserver {
+  String? currentSessionId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Agrega el observador para recibir notificaciones del ciclo de vida
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // Remueve el observador al destruirse el widget para evitar fugas de memoria
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Si no hay usuario autenticado, no se registra la actividad.
+      print("La aplicación cambió de estado: $state, sin usuario autenticado.");
+      return;
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final userId = user.uid;
+    final now = Timestamp.now();
+
+    if (state == AppLifecycleState.resumed) {
+      // Crear un nuevo documento en 'activities' con la hora de inicio.
+      final docRef = await firestore.collection('activities').add({
+        'userId': userId,
+        'startTime': now,
+        'endTime': null,
+      });
+      currentSessionId = docRef.id;
+    } else if (state == AppLifecycleState.paused && currentSessionId != null) {
+      // Actualizar el documento actual con la hora de cierre.
+      await firestore.collection('activities').doc(currentSessionId).update({
+        'endTime': now,
+      });
+      currentSessionId = null;
+    }
+
+    print("La aplicación cambió de estado: $state");
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Repositories
         Provider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
         Provider<ProductRepository>(create: (_) => ProductRepositoryImpl()),
         Provider<UserRepository>(create: (_) => UserRepositoryImpl()),
         Provider<FavoritesRepository>(create: (_) => FavoritesRepositoryImpl()),
-
-        // ViewModels
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
         ChangeNotifierProvider(create: (context) => AddProductViewModel(context.read<ProductRepository>())),
         ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
-
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         initialRoute: '/splash',
@@ -91,7 +142,6 @@ class SenemarketApp extends StatelessWidget {
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
           '/my_products': (_) => const MyProductsPage(),
-
         },
       ),
     );
