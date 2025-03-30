@@ -55,47 +55,72 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
   @override
   void initState() {
     super.initState();
-    // Agrega el observador para recibir notificaciones del ciclo de vida
     WidgetsBinding.instance.addObserver(this);
+    print("Observador del ciclo de vida agregado.");
+
+    // Registra la actividad inicial, ya que didChangeAppLifecycleState no se dispara al iniciar.
+    _logInitialActivity();
   }
 
-  @override
-  void dispose() {
-    // Remueve el observador al destruirse el widget para evitar fugas de memoria
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
+  Future<void> _logInitialActivity() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      // Si no hay usuario autenticado, no se registra la actividad.
-      print("La aplicación cambió de estado: $state, sin usuario autenticado.");
-      return;
-    }
-
-    final firestore = FirebaseFirestore.instance;
-    final userId = user.uid;
+    final userId = user?.uid ?? 'anonymous';
     final now = Timestamp.now();
-
-    if (state == AppLifecycleState.resumed) {
-      // Crear un nuevo documento en 'activities' con la hora de inicio.
-      final docRef = await firestore.collection('activities').add({
+    try {
+      final docRef = await FirebaseFirestore.instance.collection('activities').add({
         'userId': userId,
         'startTime': now,
         'endTime': null,
       });
       currentSessionId = docRef.id;
-    } else if (state == AppLifecycleState.paused && currentSessionId != null) {
-      // Actualizar el documento actual con la hora de cierre.
-      await firestore.collection('activities').doc(currentSessionId).update({
-        'endTime': now,
-      });
-      currentSessionId = null;
+      print("Actividad inicial registrada, ID: $currentSessionId");
+    } catch (e) {
+      print("Error al registrar la actividad inicial: $e");
     }
+  }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+    print("Observador del ciclo de vida removido.");
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     print("La aplicación cambió de estado: $state");
+
+    // Siempre asigna 'anonymous' si no hay usuario autenticado.
+    final user = FirebaseAuth.instance.currentUser;
+    final userId = user?.uid ?? 'anonymous';
+    final firestore = FirebaseFirestore.instance;
+    final now = Timestamp.now();
+
+    if (state == AppLifecycleState.resumed) {
+      try {
+        // Registra una nueva actividad al volver a primer plano.
+        final docRef = await firestore.collection('activities').add({
+          'userId': userId,
+          'startTime': now,
+          'endTime': null,
+        });
+        currentSessionId = docRef.id;
+        print("Actividad iniciada, ID: $currentSessionId");
+      } catch (e) {
+        print("Error al crear actividad: $e");
+      }
+    } else if (state == AppLifecycleState.paused && currentSessionId != null) {
+      try {
+        // Actualiza la actividad actual con la hora de cierre.
+        await firestore.collection('activities').doc(currentSessionId).update({
+          'endTime': now,
+        });
+        print("Actividad actualizada, ID: $currentSessionId");
+        currentSessionId = null;
+      } catch (e) {
+        print("Error al actualizar actividad: $e");
+      }
+    }
   }
 
   @override
@@ -128,7 +153,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           ),
           iconButtonTheme: IconButtonThemeData(
             style: ButtonStyle(
-              overlayColor: MaterialStateProperty.all(Colors.transparent),
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
             ),
           ),
         ),
