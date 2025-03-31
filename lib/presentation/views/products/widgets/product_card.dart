@@ -4,15 +4,17 @@ import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/product_detail_page.dart';
 
 /// UI card to display a single [Product].
-/// Calls [onCategoryTap] when the card is tapped (optional).
+/// Calls [onCategoryTap] when the category is tapped (optional) and [onProductTap] when the card is tapped.
 class ProductCard extends StatelessWidget {
   final Product product;
   final ValueChanged<String>? onCategoryTap;
+  final VoidCallback? onProductTap; // Callback opcional para el clic en el producto
 
   const ProductCard({
     Key? key,
     required this.product,
     this.onCategoryTap,
+    this.onProductTap,
   }) : super(key: key);
 
   @override
@@ -25,12 +27,15 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Call category tap callback if provided
+        // Llama al callback del clic en el producto si está definido
+        if (onProductTap != null) {
+          onProductTap!();
+        }
+        // Llama al callback de categoría si se desea
         if (onCategoryTap != null && category.isNotEmpty) {
           onCategoryTap!(category);
         }
-
-        // Navigate to product detail page
+        // Navega a la página de detalle del producto
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -72,7 +77,6 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
-
             // Product name
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -83,7 +87,6 @@ class ProductCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-
             // Product price
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -102,3 +105,4 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
+

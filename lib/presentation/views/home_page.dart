@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   // Tracks category clicks for sorting
   Map<String, int> _categoryClicks = {};
 
+  // Se asume que el usuario está autenticado en HomePage.
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   final _productRepo = ProductRepositoryImpl();
 
@@ -54,11 +55,13 @@ class _HomePageState extends State<HomePage> {
 
   /// Load category click data from Firestore
   Future<void> _loadUserClicks() async {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final userDoc =
+    await FirebaseFirestore.instance.collection('users').doc(userId).get();
     if (userDoc.exists) {
       final data = userDoc.data();
       setState(() {
-        _categoryClicks = Map<String, int>.from(data?['categoryClicks'] ?? {});
+        _categoryClicks =
+        Map<String, int>.from(data?['categoryClicks'] ?? {});
       });
     }
   }
@@ -68,11 +71,21 @@ class _HomePageState extends State<HomePage> {
     if (index == _selectedIndex) return;
 
     switch (index) {
-      case 0: Navigator.pushReplacementNamed(context, '/home'); break;
-      case 1: Navigator.pushReplacementNamed(context, '/chats'); break;
-      case 2: Navigator.pushReplacementNamed(context, '/add_product'); break;
-      case 3: Navigator.pushReplacementNamed(context, '/favorites'); break;
-      case 4: Navigator.pushReplacementNamed(context, '/profile'); break;
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/chats');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/add_product');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/favorites');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
     }
   }
 
@@ -82,10 +95,25 @@ class _HomePageState extends State<HomePage> {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
 
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+    final userDoc =
+    FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
+  }
+
+  /// Registers a product click in Firestore.
+  Future<void> _registerProductClick(Product product) async {
+    try {
+      await FirebaseFirestore.instance.collection('product-clics').add({
+        'userId': userId,
+        'productId': product.id, // Asegúrate de que Product tenga este campo
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('Producto clickeado: ${product.id}');
+    } catch (e) {
+      print('Error registrando el clic en el producto: $e');
+    }
   }
 
   /// Return categories sorted by user's clicks
@@ -113,7 +141,8 @@ class _HomePageState extends State<HomePage> {
         : baseProducts;
 
     // Exclude products created by the current user
-    final visibleProducts = products.where((product) => product.userId != userId).toList();
+    final visibleProducts =
+    products.where((product) => product.userId != userId).toList();
 
     // Filter by selected categories
     List<Product> filtered = _selectedCategories.isEmpty
@@ -220,7 +249,8 @@ class _HomePageState extends State<HomePage> {
                   );
 
                   return GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
@@ -233,6 +263,10 @@ class _HomePageState extends State<HomePage> {
                         product: product,
                         onCategoryTap: (category) {
                           _incrementCategoryClick(category);
+                        },
+                        // Registra el clic en el producto
+                        onProductTap: () {
+                          _registerProductClick(product);
                         },
                       );
                     },
