@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:senemarket/presentation/views/favorites/viewmodel/favorites_viewmodel.dart';
 
 import '../../widgets/global/navigation_bar.dart';
-import 'viewmodel/favorites_viewmodel.dart';
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_card.dart';
 import 'package:senemarket/presentation/widgets/global/search_bar.dart' as searchBar;
@@ -19,6 +21,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  // Se asume que el usuario está autenticado en esta página.
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +36,20 @@ class _FavoritesPageState extends State<FavoritesPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Función que registra el clic de un producto en Firestore, en la colección "product-clics"
+  Future<void> _registerProductClick(dynamic product) async {
+    try {
+      await FirebaseFirestore.instance.collection('product-clics').add({
+        'userId': userId,
+        'productId': product.id, // Asegúrate de que el objeto product tenga el campo 'id'
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('Producto clickeado: ${product.id}');
+    } catch (e) {
+      print('Error registrando el clic en el producto: $e');
+    }
   }
 
   @override
@@ -80,7 +99,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16.0, vertical: 8.0),
             child: Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
@@ -118,7 +138,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 childAspectRatio: 0.75,
               ),
               itemBuilder: (context, index) {
-                return ProductCard(product: filteredFavorites[index]);
+                final product = filteredFavorites[index];
+                return ProductCard(
+                  product: product,
+                  onCategoryTap: (category) {
+                    // Aquí puedes dejar la lógica de incrementar clics de categoría
+                  },
+                  // Se agrega el callback para registrar el clic del producto.
+                  onProductTap: () {
+                    _registerProductClick(product);
+                  },
+                );
               },
             ),
           ),
@@ -127,3 +157,4 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 }
+
