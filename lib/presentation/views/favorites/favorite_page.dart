@@ -114,7 +114,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     fontFamily: 'Cabin',
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary30,
+                    color: AppColors.primary0,
                   ),
                 ),
               ),

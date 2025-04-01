@@ -143,17 +143,28 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         theme: ThemeData(
           fontFamily: 'Cabin',
           scaffoldBackgroundColor: constants.AppColors.primary30,
-          progressIndicatorTheme: const ProgressIndicatorThemeData(
-            color: constants.AppColors.primary30,
+          primaryColor: constants.AppColors.primary30, // << añade esto
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: constants.AppColors.primary30, // afecta cursor y campos activos
+            primary: constants.AppColors.primary30,
           ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              overlayColor: constants.AppColors.secondary20,
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: constants.AppColors.primary30,       // ← cursor “|” morado → primary30
+            selectionColor: constants.AppColors.primary30.withOpacity(0.4),
+            selectionHandleColor: constants.AppColors.primary30,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            labelStyle: const TextStyle(
+              fontFamily: 'Cabin',
+              fontSize: 16,
+              color: constants.AppColors.primary0, // ← label normal
             ),
-          ),
-          iconButtonTheme: IconButtonThemeData(
-            style: ButtonStyle(
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(1),
+              borderSide: const BorderSide(
+                color: constants.AppColors.primary50, // ← label activo y borde
+                width: 2.0,
+              ),
             ),
           ),
         ),

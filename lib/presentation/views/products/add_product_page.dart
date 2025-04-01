@@ -10,8 +10,6 @@ import 'package:senemarket/constants.dart' as constants;
 
 import 'viewmodel/add_product_viewmodel.dart';
 
-/// This page allows the user to add a new product to the marketplace.
-/// It includes form fields for product name, price, description, category, and images.
 class AddProductPage extends StatefulWidget {
   const AddProductPage({Key? key}) : super(key: key);
 
@@ -32,7 +30,6 @@ class _AddProductPageState extends State<AddProductPage> {
   String? _selectedCategory;
   bool _isFormValid = false;
 
-  /// Validates that all required fields are filled and at least one image is added.
   void _validateForm() {
     setState(() {
       _isFormValid = _images.isNotEmpty &&
@@ -43,7 +40,6 @@ class _AddProductPageState extends State<AddProductPage> {
     });
   }
 
-  /// Picks an image from the camera, up to 5 allowed.
   Future<void> _pickImageFromCamera() async {
     if (_images.length >= 5) {
       _showSnackBar("You can only upload up to 5 images");
@@ -58,7 +54,6 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  /// Picks an image from the gallery, up to 5 allowed.
   Future<void> _pickImageFromGallery() async {
     if (_images.length >= 5) {
       _showSnackBar("You can only upload up to 5 images");
@@ -73,27 +68,26 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  /// Displays a simple snackbar message.
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
 
-  /// Submits the form and uploads the product.
   Future<void> _saveProduct() async {
     final addProductVM = context.read<AddProductViewModel>();
 
     if (_isFormValid) {
       try {
-        // Show loading dialog
+        // Show loading dialog with white background
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const AlertDialog(
+          builder: (_) => AlertDialog(
+            backgroundColor: Colors.white,
             content: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: const [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text("Publishing product..."),
@@ -112,7 +106,7 @@ class _AddProductPageState extends State<AddProductPage> {
           price: parsedPrice,
         );
 
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);
 
         if (addProductVM.errorMessage != null && addProductVM.errorMessage!.isNotEmpty) {
           _showSnackBar(addProductVM.errorMessage!);
@@ -128,7 +122,6 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  /// Handles bottom navigation bar interactions.
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
 
@@ -140,7 +133,7 @@ class _AddProductPageState extends State<AddProductPage> {
         Navigator.pushReplacementNamed(context, '/chats');
         break;
       case 2:
-        break; // Already on AddProduct
+        break;
       case 3:
         Navigator.pushReplacementNamed(context, '/favorites');
         break;
@@ -150,7 +143,6 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  /// UI Build method for the product form.
   @override
   Widget build(BuildContext context) {
     final addProductVM = context.watch<AddProductViewModel>();
@@ -159,7 +151,7 @@ class _AddProductPageState extends State<AddProductPage> {
     return Scaffold(
       backgroundColor: constants.AppColors.primary50,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // No back button
+        automaticallyImplyLeading: false,
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
@@ -234,9 +226,7 @@ class _AddProductPageState extends State<AddProductPage> {
                       ),
                     ),
                     onPressed: isLoading ? null : _saveProduct,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text(
+                    child: const Text(
                       'Add',
                       style: TextStyle(
                         fontFamily: 'Cabin',

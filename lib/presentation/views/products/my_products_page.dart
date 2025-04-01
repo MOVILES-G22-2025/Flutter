@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/domain/entities/product.dart';
-import 'package:senemarket/data/repositories/product_repository_impl.dart';
+import 'package:senemarket/domain/repositories/product_repository.dart'; // ← Usa la abstracción
+
 import 'package:senemarket/presentation/views/products/viewmodel/edit_product_viewmodel.dart';
 import 'package:senemarket/presentation/views/products/edit_product_page.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
@@ -21,18 +22,61 @@ class MyProductsPage extends StatefulWidget {
 
 class _MyProductsPageState extends State<MyProductsPage> {
   final _auth = FirebaseAuth.instance;
-  final _productRepo = ProductRepositoryImpl();
+  late final ProductRepository _productRepo;
   int _selectedIndex = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _productRepo = context.read<ProductRepository>(); // ← Aquí se usa la abstracción
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductSearchViewModel>().updateSearchQuery('');
+    });
+  }
 
   Future<void> _deleteProduct(String productId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Product"),
-        content: const Text("Are you sure you want to delete this product?"),
+        backgroundColor: Colors.white, // ← Establece fondo blanco
+        title: const Text(
+          "Delete Product",
+          style: TextStyle(
+            fontFamily: 'Cabin',
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        content: const Text(
+          "Are you sure you want to delete this product?",
+          style: TextStyle(
+            fontFamily: 'Cabin',
+            color: Colors.black87,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                fontFamily: 'Cabin',
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(
+                fontFamily: 'Cabin',
+                color: AppColors.primary30,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -40,14 +84,6 @@ class _MyProductsPageState extends State<MyProductsPage> {
     if (confirm == true) {
       await _productRepo.deleteProduct(productId);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductSearchViewModel>().updateSearchQuery('');
-    });
   }
 
   @override
@@ -81,12 +117,9 @@ class _MyProductsPageState extends State<MyProductsPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: searchBar.SearchBar(
               hintText: 'Search your products...',
-              onChanged: (query) {
-                searchVM.updateSearchQuery(query);
-              },
+              onChanged: searchVM.updateSearchQuery,
             ),
           ),
-
           const SizedBox(height: 10),
           const Padding(
             padding: EdgeInsets.only(top: 4.0, left: 16.0, right: 16.0),
@@ -103,7 +136,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
               ),
             ),
           ),
-          const SizedBox(height: 14),          Expanded(
+          const SizedBox(height: 14),
+          Expanded(
             child: StreamBuilder<List<Product>>(
               stream: _productRepo.getProductsStream(),
               builder: (context, snapshot) {
