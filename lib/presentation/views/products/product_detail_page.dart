@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/data/repositories/product_repository_impl.dart';
-import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/domain/entities/product.dart';
+import 'package:senemarket/domain/repositories/product_repository.dart';
+import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -20,14 +21,17 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
   bool _isStarred = false;
-  final _productRepo = ProductRepositoryImpl();
-  final _userRepo = UserRepositoryImpl();
+
+  late final ProductRepository _productRepo;
+  late final UserRepository _userRepo;
 
   String get productId => widget.product.id;
 
   @override
   void initState() {
     super.initState();
+    _productRepo = context.read<ProductRepository>();
+    _userRepo = context.read<UserRepository>();
     _checkIfFavorited();
   }
 
@@ -150,7 +154,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           children: [
             ProductImageCarousel(images: product.imageUrls),
             const SizedBox(height: 10),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -173,7 +176,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ],
             ),
-
             if (product.timestamp != null)
               Text(
                 'Posted: ${DateFormat.yMMMMd().format(product.timestamp!)}',
@@ -182,7 +184,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   color: Colors.grey,
                 ),
               ),
-
             const SizedBox(height: 16),
             Row(
               children: [
@@ -207,15 +208,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ],
             ),
             const SizedBox(height: 16),
-
-            /// Seller info + chat button
             Padding(
               padding: const EdgeInsets.only(top: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Seller name info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,10 +238,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Chat button
                   ElevatedButton.icon(
                     onPressed: () {
-                      // Aquí puedes añadir la lógica de navegación a la pantalla de chat
+                      // Chat navigation
                     },
                     icon: const Icon(Icons.chat_bubble_outline, size: 18),
                     label: const Text("Chat"),
@@ -264,7 +261,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
             const Text(
               "Description",
