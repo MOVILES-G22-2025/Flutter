@@ -1,82 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/domain/entities/product.dart';
-import 'package:senemarket/domain/repositories/product_repository.dart';
+import 'package:senemarket/domain/repositories/favorites_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
+import 'package:senemarket/presentation/views/products/viewmodel/product_detail_viewmodel.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
 
-class ProductDetailPage extends StatefulWidget {
+class ProductDetailPage extends StatelessWidget {
   final Product product;
 
   const ProductDetailPage({Key? key, required this.product}) : super(key: key);
 
   @override
-  State<ProductDetailPage> createState() => _ProductDetailPageState();
+  Widget build(BuildContext context) {
+    // Provee el ViewModel y lo inicializa con el producto
+    return ChangeNotifierProvider(
+      create: (_) => ProductDetailViewModel(
+        context.read<FavoritesRepository>(),
+        context.read<UserRepository>(),
+        auth: FirebaseAuth.instance,
+      )..init(product),
+      child: ProductDetailPageContent(product: product),
+    );
+  }
 }
 
-class _ProductDetailPageState extends State<ProductDetailPage> {
-  bool _isStarred = false;
+class ProductDetailPageContent extends StatelessWidget {
+  final Product product;
 
-  late final ProductRepository _productRepo;
-  late final UserRepository _userRepo;
-
-  String get productId => widget.product.id;
-
-  @override
-  void initState() {
-    super.initState();
-    _productRepo = context.read<ProductRepository>();
-    _userRepo = context.read<UserRepository>();
-    _checkIfFavorited();
-  }
-
-  Future<void> _checkIfFavorited() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null || productId.isEmpty) return;
-
-    try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (userDoc.exists) {
-        final data = userDoc.data();
-        List<dynamic> favorites = data?['favorites'] ?? [];
-        setState(() {
-          _isStarred = favorites.contains(productId);
-        });
-      }
-    } catch (e) {
-      print("Error checking favorites: $e");
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null || productId.isEmpty) return;
-
-    setState(() {
-      _isStarred = !_isStarred;
-    });
-
-    try {
-      if (_isStarred) {
-        await _userRepo.addFavorite(productId);
-        await _productRepo.addProductFavorite(userId: userId, productId: productId);
-      } else {
-        await _userRepo.removeFavorite(productId);
-        await _productRepo.removeProductFavorite(userId: userId, productId: productId);
-      }
-    } catch (e) {
-      print("Error updating favorite: $e");
-    }
-  }
+  const ProductDetailPageContent({Key? key, required this.product}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
+    final vm = context.watch<ProductDetailViewModel>();
 
     return Scaffold(
       backgroundColor: AppColors.primary50,
@@ -168,11 +128,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
                 IconButton(
                   icon: Icon(
-                    _isStarred ? Icons.favorite : Icons.favorite_border,
+                    vm.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: AppColors.primary30,
                     size: 32,
                   ),
-                  onPressed: _toggleFavorite,
+                  onPressed: () => vm.toggleFavorite(product),
                 ),
               ],
             ),
@@ -227,7 +187,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           ),
                         ),
                         Text(
-                          widget.product.sellerName,
+                          product.sellerName,
                           style: const TextStyle(
                             fontSize: 18,
                             fontFamily: 'Cabin',
@@ -240,7 +200,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () {
-                      // Chat navigation
+                      // TODO: Navigate to chat
                     },
                     icon: const Icon(Icons.chat_bubble_outline, size: 18),
                     label: const Text("Chat"),
