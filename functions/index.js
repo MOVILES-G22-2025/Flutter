@@ -5,7 +5,6 @@ const admin = require("firebase-admin");
 const sgMail = require("@sendgrid/mail");
 
 // Solo si necesitas inicializar con un Service Account
-// (si ya lo haces en otro archivo, no dupliques)
 const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
@@ -17,7 +16,7 @@ sgMail.setApiKey(functions.config().sendgrid.key);
 
 /**
  * notifyPriceChange
- * 
+ *
  * Se ejecuta cuando se actualiza un documento en la colección "products".
  * Verifica si el precio cambió y, si es así, envía un correo a todos los
  * usuarios que tienen el producto en sus "favoritos".
@@ -29,8 +28,8 @@ exports.notifyPriceChange = functions.firestore
     const afterData = change.after.data();
 
     // 1. Verificar si el precio cambió
-    if (beforeData.price === afterData.price) {
-      console.log("El precio no ha cambiado.");
+    if (beforeData.price <= afterData.price) {
+      console.log("El precio no ha bajado.");
       return null;
     }
 
@@ -40,7 +39,7 @@ exports.notifyPriceChange = functions.firestore
     const productName = afterData.name || "Tu producto";
 
     console.log(
-      `Producto ${productId}: precio antes = ${beforeData.price}, precio ahora = ${newPrice}`
+      Producto ${productId}: precio antes = ${beforeData.price}, precio ahora = ${newPrice}
     );
 
     // 3. Obtener la lista de usuarios que tienen este producto como favorito
@@ -74,16 +73,17 @@ exports.notifyPriceChange = functions.firestore
     const mailPromises = emails.map(async (email) => {
       const msg = {
         to: email,
-        from: "mateocalderonr816@gmail.com", // <--- Cambia esto a tu correo verificado en SendGrid
-        subject: "Precio actualizado",
-        text: `Hola, el precio de ${productName} cambió a $${newPrice}. (ID del producto: ${productId})`,
+        from: "senemarket.notifications@gmail.com", // <--- Cambia esto a tu correo verificado en SendGrid
+        subject: Uno de tus productos favoritos bajó de precio en SeneMarket: ${productName},
+
+        text: Hola, el precio de tu producto favorito ${productName} bajó de precio. Pasó de estar de $${beforeData.price} a $${newPrice}. Este es un gran momento para comprar, no dudes en aprovechar este cambio,
       };
 
       try {
         await sgMail.send(msg);
-        console.log(`Correo enviado correctamente a: ${email}`);
+        console.log(Correo enviado correctamente a: ${email});
       } catch (error) {
-        console.error(`Error al enviar el correo a ${email}:`, error);
+        console.error(Error al enviar el correo a ${email}:, error);
       }
     });
 
