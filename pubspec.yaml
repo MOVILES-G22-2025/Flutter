@@ -13,7 +13,7 @@ dependencies:
   firebase_core: ^3.12.1
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
-  firebase_messaging: 15.2.4        # <--- Agrega esta línea
+  firebase_messaging: 15.2.4
   image_picker: ^0.8.7+3
   firebase_storage: ^12.4.4
   cached_network_image: ^3.2.3
@@ -21,13 +21,18 @@ dependencies:
   provider: ^6.0.5
   algolia: ^1.1.2
   intl: ^0.18.0
-
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^3.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/senemarket-logo.png"
 
 flutter:
   uses-material-design: true

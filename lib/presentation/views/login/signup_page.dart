@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
+import 'package:senemarket/presentation/widgets/form_fields/password/confirm_password_field.dart';
+import '../../widgets/form_fields/custom_field.dart';
+import '../../widgets/form_fields/password/password_field.dart';
+import '../../widgets/global/errors/error_messages.dart';
+import '../../widgets/global/errors/error_text.dart';
 import 'viewmodel/sign_up_viewmodel.dart';
 
 /// Page to create a new user account.
@@ -23,7 +28,12 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   // Local error message for invalid form state
-  String _localErrorMessage = '';
+  String? _localErrorMessage;
+  String? _nameLengthError;
+  String? _emailFormatError;
+  String? _careerLengthError;
+  String? _semesterRangeError;
+  String? _passwordMatchError;
 
   // Track empty fields to show red borders if needed
   final Map<String, bool> _emptyFields = {
@@ -51,93 +61,149 @@ class _SignUpPageState extends State<SignUpPage> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.85,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Create account',
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Create account',
+                  style: TextStyle(
+                    fontFamily: 'Cabin',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary0,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Input fields
+                // Full name
+                CustomTextField(controller: _nameController, label: 'Full name',
+                  onChanged: (value) {
+                  if (value.length > 40) {
+                    setState(() => _nameLengthError = ErrorMessages.maxChar);
+                  } else {
+                    setState(() => _nameLengthError = null);
+                  }
+                },
+                ),
+                ErrorText(_nameLengthError),
+                const SizedBox(height: 8),
+
+                // Uniandes email
+                CustomTextField(controller: _emailController, label: 'Uniandes email',
+                  onChanged: (value) {
+                  if (value.isNotEmpty && !value.endsWith('@uniandes.edu.co')) {
+                    setState(() => _emailFormatError = ErrorMessages.invalidEmailDomain);
+                  } else {
+                    setState(() => _emailFormatError = null);
+                  }
+                },
+                ),
+                ErrorText(_emailFormatError),
+                const SizedBox(height: 8),
+
+                // Career
+                CustomTextField(controller: _careerController, label: 'Career',
+                  onChanged: (value) {
+                  if (value.length > 40) {
+                    setState(() => _careerLengthError = ErrorMessages.maxChar);
+                  } else {
+                    setState(() => _careerLengthError = null);
+                  }
+                },
+                ),
+                ErrorText(_careerLengthError),
+                const SizedBox(height: 8),
+
+                //Semester
+                CustomTextField(controller: _semesterController, label: 'Semester', isNumeric: true,
+                  onChanged: (value) {
+                  final intSemester = int.tryParse(value);
+                  if (intSemester != null && (intSemester < 1 || intSemester > 20)) {
+                    setState(() => _semesterRangeError = ErrorMessages.semesterRange);
+                  } else {
+                    setState(() => _semesterRangeError = null);
+                  }
+                  },
+                ),
+                ErrorText(_semesterRangeError),
+                const SizedBox(height: 8),
+
+                // Password
+                PasswordField(controller: _passwordController, label: 'Password',
+                  onChanged: (value) {
+                  if (_confirmPasswordController.text != value) {
+                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                  } else {
+                    setState(() => _passwordMatchError = null);
+                  }
+                  },
+                ),
+                const SizedBox(height: 8),
+                ConfirmPasswordField(controller: _confirmPasswordController, label: 'Confirm password',
+                  onChanged: (value) {
+                  if (value != _passwordController.text) {
+                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                  } else {
+                    setState(() => _passwordMatchError = null);
+                  }
+                },
+                ),
+                ErrorText(_passwordMatchError),
+                const SizedBox(height: 8),
+
+                if (_localErrorMessage != null)
+                  const ErrorText(ErrorMessages.allFieldsRequired),
+                const SizedBox(height: 8),
+
+                // Register button
+                ElevatedButton(
+                  onPressed: signUpViewModel.isLoading ? null : _signUp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary30,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+                  ),
+                  child: signUpViewModel.isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text(
+                    'Register',
                     style: TextStyle(
                       fontFamily: 'Cabin',
-                      fontSize: 28,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary0,
+                      color: AppColors.primary50,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 20),
 
-                  // Input fields
-                  _buildTextField('Full name', _nameController, 'name'),
-                  _buildTextField('Uniandes email', _emailController, 'email'),
-                  _buildTextField('Career', _careerController, 'career'),
-                  _buildTextField('Semester', _semesterController, 'semester', isNumeric: true),
-                  _buildTextField('Password', _passwordController, 'password', obscureText: true),
-                  _buildTextField('Confirm password', _confirmPasswordController, 'confirmPassword', obscureText: true),
-                  const SizedBox(height: 10),
-
-                  // Error messages
-                  if (_localErrorMessage.isNotEmpty)
-                    Text(
-                      _localErrorMessage,
-                      style: const TextStyle(color: AppColors.primary30, fontSize: 14),
+                // Link to Sign In
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Already have an account? ',
+                      style: TextStyle(fontFamily: 'Cabin', fontSize: 14, color: AppColors.primary0),
                     ),
-                  if (signUpViewModel.errorMessage.isNotEmpty)
-                    Text(
-                      signUpViewModel.errorMessage,
-                      style: const TextStyle(color: AppColors.primary30, fontSize: 14),
-                    ),
-                  const SizedBox(height: 20),
-
-                  // Register button
-                  ElevatedButton(
-                    onPressed: signUpViewModel.isLoading ? null : _signUp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary30,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-                    ),
-                    child: signUpViewModel.isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text(
-                      'Register',
-                      style: TextStyle(
-                        fontFamily: 'Cabin',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary50,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Link to Sign In
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Already have an account? ',
-                        style: TextStyle(fontFamily: 'Cabin', fontSize: 14, color: AppColors.primary0),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/signIn'),
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontFamily: 'Cabin',
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary30,
-                          ),
+                    GestureDetector(
+                      onTap: () => Navigator.pushReplacementNamed(context, '/signIn'),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary30,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -147,11 +213,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
   /// Handles form validation and calls the ViewModel to register the user.
   Future<void> _signUp() async {
-    final signUpViewModel = context.read<SignUpViewModel>();
+    final signUpVM = context.read<SignUpViewModel>();
 
     setState(() {
-      _localErrorMessage = '';
-      signUpViewModel.errorMessage = '';
+      _localErrorMessage = null;
     });
 
     final name = _nameController.text.trim();
@@ -161,38 +226,33 @@ class _SignUpPageState extends State<SignUpPage> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    // Mark empty fields to show red borders
-    setState(() {
-      _emptyFields['name'] = name.isEmpty;
-      _emptyFields['email'] = email.isEmpty;
-      _emptyFields['career'] = career.isEmpty;
-      _emptyFields['semester'] = semester.isEmpty;
-      _emptyFields['password'] = password.isEmpty;
-      _emptyFields['confirmPassword'] = confirmPassword.isEmpty;
-    });
-
-    if (_emptyFields.containsValue(true)) {
-      setState(() {
-        _localErrorMessage = 'All fields must be filled out';
-      });
+    if ([name, email, career, semester, password, confirmPassword].any((field) => field.isEmpty)) {
+      setState(() => _localErrorMessage = ErrorMessages.allFieldsRequired);
       return;
     }
 
     if (!email.endsWith('@uniandes.edu.co')) {
-      setState(() {
-        _localErrorMessage = 'You must use an @uniandes.edu.co email';
-      });
+      setState(() => _localErrorMessage = ErrorMessages.invalidEmailDomain);
+      return;
+    }
+
+    final intSemester = int.tryParse(semester);
+    if (intSemester == null || intSemester < 1 || intSemester > 20) {
+      setState(() => _localErrorMessage = ErrorMessages.semesterRange);
       return;
     }
 
     if (password != confirmPassword) {
-      setState(() {
-        _localErrorMessage = 'Passwords do not match';
-      });
+      setState(() => _localErrorMessage = ErrorMessages.passwordsDoNotMatch);
       return;
     }
 
-    await signUpViewModel.signUp(
+    if (name.length > 40 || career.length > 40) {
+      setState(() => _localErrorMessage = ErrorMessages.maxChar);
+      return;
+    }
+
+    await signUpVM.signUp(
       email: email,
       password: password,
       name: name,
@@ -200,65 +260,8 @@ class _SignUpPageState extends State<SignUpPage> {
       semester: semester,
     );
 
-    if (signUpViewModel.errorMessage.isEmpty) {
+    if (signUpVM.errorMessage.isEmpty) {
       Navigator.pushReplacementNamed(context, '/home');
     }
-  }
-
-  /// Builds a styled TextField with optional validation.
-  Widget _buildTextField(
-      String hintText,
-      TextEditingController controller,
-      String fieldKey, {
-        bool obscureText = false,
-        bool isNumeric = false,
-      }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-        inputFormatters: isNumeric ? [FilteringTextInputFormatter.digitsOnly] : [],
-        style: const TextStyle(
-          fontFamily: 'Cabin',
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: AppColors.primary0,
-        ),
-        onChanged: (value) {
-          setState(() {
-            _emptyFields[fieldKey] = value.isEmpty;
-          });
-        },
-        decoration: InputDecoration(
-          hintText: hintText,
-          filled: true,
-          fillColor: AppColors.primary50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(
-              color: _emptyFields[fieldKey]! ? Colors.red : AppColors.primary0,
-              width: 2.0,
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(
-              color: _emptyFields[fieldKey]! ? Colors.red : AppColors.primary0,
-              width: 2.0,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(
-              color: _emptyFields[fieldKey]! ? Colors.red : AppColors.primary30,
-              width: 2.0,
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-        ),
-      ),
-    );
   }
 }
