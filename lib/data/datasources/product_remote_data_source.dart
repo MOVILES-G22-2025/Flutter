@@ -63,12 +63,21 @@ class ProductRemoteDataSource {
 
   /// Adds or removes the user from the product's 'favoritedBy' list.
   Future<void> updateFavorites(String productId, String userId, bool add) async {
-    final ref = _db.collection('products').doc(productId);
-    await ref.set({
-      'favoritedBy': add
-          ? FieldValue.arrayUnion([userId])
-          : FieldValue.arrayRemove([userId])
-    }, SetOptions(merge: true));
+    final productRef = _db.collection('products').doc(productId);
+    final userRef = _db.collection('users').doc(userId);
+
+    await Future.wait([
+      productRef.set({
+        'favoritedBy': add
+            ? FieldValue.arrayUnion([userId])
+            : FieldValue.arrayRemove([userId])
+      }, SetOptions(merge: true)),
+      userRef.set({
+        'favorites': add
+            ? FieldValue.arrayUnion([productId])
+            : FieldValue.arrayRemove([productId])
+      }, SetOptions(merge: true)),
+    ]);
   }
 
   /// Deletes a product from Firestore by its ID.
@@ -90,6 +99,15 @@ class ProductRemoteDataSource {
     } catch (e) {
       print('Error deleting image from Firebase Storage: $e');
     }
+  }
+
+  /// Aplica una operación de favorito usando un payload genérico
+  Future<void> toggleFavoriteFromPayload(Map<String, dynamic> payload) async {
+    final productId = payload['productId'] as String;
+    final userId = payload['userId'] as String;
+    final add = payload['value'] as bool;
+
+    await updateFavorites(productId, userId, add);
   }
 
 }

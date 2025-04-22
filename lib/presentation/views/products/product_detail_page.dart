@@ -10,6 +10,8 @@ import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/product_detail_viewmodel.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
 
+import '../../../domain/repositories/product_repository.dart';
+
 class ProductDetailPage extends StatelessWidget {
   final Product product;
 
@@ -20,7 +22,7 @@ class ProductDetailPage extends StatelessWidget {
     // Provee el ViewModel y lo inicializa con el producto
     return ChangeNotifierProvider(
       create: (_) => ProductDetailViewModel(
-        context.read<FavoritesRepository>(),
+        context.read<ProductRepository>(),
         context.read<UserRepository>(),
         auth: FirebaseAuth.instance,
       )..init(product),
@@ -131,9 +133,11 @@ class ProductDetailPageContent extends StatelessWidget {
                     vm.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: AppColors.primary30,
                     size: 32,
+
                   ),
-                  onPressed: () => vm.toggleFavorite(product),
-                ),
+                  onPressed: () {
+                    vm.toggleFavorite(product);
+                  },                ),
               ],
             ),
             if (product.timestamp != null)
