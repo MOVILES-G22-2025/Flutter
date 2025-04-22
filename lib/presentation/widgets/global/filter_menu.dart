@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:senemarket/constants.dart';
 
 class FilterMenu extends StatelessWidget {
+  // Mantiene los mismos parámetros originales
   final String selectedDateOrder;
   final String selectedPriceOrder;
   final Function(String) onDateSortSelected;
   final Function(String) onPriceSortSelected;
+
+  // NUEVOS: Para manejar la opción “Academic Calendar”
+  final bool academicCalendarActive;
+  final Function(bool) onAcademicCalendarToggle;
 
   const FilterMenu({
     Key? key,
@@ -13,6 +18,9 @@ class FilterMenu extends StatelessWidget {
     required this.selectedPriceOrder,
     required this.onDateSortSelected,
     required this.onPriceSortSelected,
+    // Requerimos también estos nuevos
+    required this.academicCalendarActive,
+    required this.onAcademicCalendarToggle,
   }) : super(key: key);
 
   @override
@@ -24,6 +32,7 @@ class FilterMenu extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Sección: Sort by date
             const _SectionTitle(title: 'Sort by date'),
             _buildOption(
               context,
@@ -40,6 +49,8 @@ class FilterMenu extends StatelessWidget {
               onTap: onDateSortSelected,
             ),
             const Divider(color: AppColors.primary30, thickness: 1, height: 24),
+
+            // Sección: Sort by price
             const _SectionTitle(title: 'Sort by price'),
             _buildOption(
               context,
@@ -55,12 +66,28 @@ class FilterMenu extends StatelessWidget {
               isSelected: selectedPriceOrder == 'Price: Low to High',
               onTap: onPriceSortSelected,
             ),
+            const Divider(color: AppColors.primary30, thickness: 1, height: 24),
+
+            // NUEVA Sección: Academic Calendar
+            const _SectionTitle(title: 'Academic Calendar'),
+            _buildOption(
+              context,
+              label: 'Enable Calendar', // o “Activate Calendar”
+              icon: Icons.calendar_today,
+              isSelected: academicCalendarActive,
+              // Como _buildOption espera Function(String),
+              // ignoramos el valor y disparamos onAcademicCalendarToggle
+              onTap: (_) {
+                onAcademicCalendarToggle(!academicCalendarActive);
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
+  /// Mantenemos la misma firma y estilo del método original
   Widget _buildOption(
       BuildContext context, {
         required String label,
@@ -74,9 +101,11 @@ class FilterMenu extends StatelessWidget {
         label,
         style: const TextStyle(fontFamily: 'Cabin', color: Colors.black),
       ),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.black) : null,
+      trailing: isSelected
+          ? const Icon(Icons.check, color: Colors.black)
+          : null,
       onTap: () {
-        onTap(label);
+        onTap(label);       // Se llama con la etiqueta, para mantener
         Navigator.pop(context);
       },
     );

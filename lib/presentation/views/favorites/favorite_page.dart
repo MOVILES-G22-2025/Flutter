@@ -38,17 +38,26 @@ class _FavoritesPageState extends State<FavoritesPage> {
     super.dispose();
   }
 
-  /// Función que registra el clic de un producto en Firestore, en la colección "product-clics"
   Future<void> _registerProductClick(dynamic product) async {
+    final hour = DateTime.now().hour; // Hora actual (0-23)
+    final docId = 'hour_$hour';
+    final category = product.category;
+
+    final docRef = FirebaseFirestore.instance.collection('product-clics').doc(docId);
+
     try {
-      await FirebaseFirestore.instance.collection('product-clics').add({
-        'userId': userId,
-        'productId': product.id, // Asegúrate de que el objeto product tenga el campo 'id'
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('Producto clickeado: ${product.id}');
+      await docRef.set({
+        'totalClicks': FieldValue.increment(1),
+        'categories': {
+          category: FieldValue.increment(1),
+        },
+        'hour': hour, // útil por si deseas filtrar posteriormente
+        'lastUpdated': FieldValue.serverTimestamp(), // opcional pero útil
+      }, SetOptions(merge: true));
+
+      print('Registrado clic en hora: $hour, categoría: $category');
     } catch (e) {
-      print('Error registrando el clic en el producto: $e');
+      print('Error actualizando clics: $e');
     }
   }
 

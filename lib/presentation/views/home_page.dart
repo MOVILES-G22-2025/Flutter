@@ -1,21 +1,17 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
-
-// UI components
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/presentation/widgets/global/search_bar.dart' as searchBar;
 import 'package:senemarket/presentation/widgets/global/filter_bar.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_card.dart';
-
-// Constants and data
 import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 
-/// Home page that displays product grid, search bar and filters
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -25,51 +21,96 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-
-  // Sort settings
   String _sortOrder = 'Newest first';
   String? _sortPrice;
-
-  // Selected categories for filtering
   List<String> _selectedCategories = [];
-
-  // Tracks category clicks for sorting
   Map<String, int> _categoryClicks = {};
+  bool _academicCalendarActive = false;
+  String? _featuredCategory;
+  String? _smartRecommendedCategory;
+  List<Product>? _allProducts;
 
-  // Se asume que el usuario está autenticado en HomePage.
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   final _productRepo = ProductRepositoryImpl();
 
   @override
   void initState() {
     super.initState();
-
-    // Reinicia el query de búsqueda cuando se entra al Home
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchVM = context.read<ProductSearchViewModel>();
       searchVM.updateSearchQuery('');
     });
 
     _loadUserClicks();
+    _loadSmartRecommendationByHour();
+    _listenToProducts();
   }
 
-  /// Load category click data from Firestore
+  Future<void> _listenToProducts() async {
+    _productRepo.getProductsStream().listen((products) {
+      setState(() {
+        _allProducts = products;
+      });
+    });
+  }
+
   Future<void> _loadUserClicks() async {
-    final userDoc =
-    await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
     if (userDoc.exists) {
       final data = userDoc.data();
       setState(() {
-        _categoryClicks =
-        Map<String, int>.from(data?['categoryClicks'] ?? {});
+        _categoryClicks = Map<String, int>.from(data?['categoryClicks'] ?? {});
       });
     }
   }
 
-  /// Handles tap on bottom navigation bar
+  Future<void> _loadSmartRecommendationByHour() async {
+    final now = DateTime.now();
+    final currentHour = now.hour;
+    final docId = "hour_$currentHour";
+
+    final docRef = FirebaseFirestore.instance.collection("product-clics").doc(docId);
+    final snapshot = await docRef.get();
+
+    if (!snapshot.exists) return;
+
+    final data = snapshot.data();
+    final categories = Map<String, dynamic>.from(data?['categories'] ?? {});
+
+    if (categories.isEmpty) return;
+
+    final sorted = categories.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    setState(() {
+      _smartRecommendedCategory = sorted.first.key;
+    });
+  }
+
+  Future<void> _registerProductClick(Product product) async {
+    final hour = DateTime.now().hour;
+    final docId = 'hour_$hour';
+    final category = product.category;
+
+    final docRef = FirebaseFirestore.instance.collection('product-clics').doc(docId);
+
+    try {
+      await docRef.set({
+        'totalClicks': FieldValue.increment(1),
+        'categories': {category: FieldValue.increment(1)},
+        'hour': hour,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error actualizando clics: $e');
+    }
+  }
+
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
+    setState(() {
+      _selectedIndex = index;
+    });
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, '/home');
@@ -89,34 +130,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Increment category click count and save to Firestore
   void _incrementCategoryClick(String category) async {
     setState(() {
       _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
     });
-
-    final userDoc =
-    FirebaseFirestore.instance.collection('users').doc(userId);
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
     await userDoc.set({
       'categoryClicks': {category: FieldValue.increment(1)}
     }, SetOptions(merge: true));
   }
 
-  /// Registers a product click in Firestore.
-  Future<void> _registerProductClick(Product product) async {
-    try {
-      await FirebaseFirestore.instance.collection('product-clics').add({
-        'userId': userId,
-        'productId': product.id, // Asegúrate de que Product tenga este campo
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('Producto clickeado: ${product.id}');
-    } catch (e) {
-      print('Error registrando el clic en el producto: $e');
-    }
-  }
-
-  /// Return categories sorted by user's clicks
   List<String> get _categoriesSortedByClicks {
     final allCategories = constants.ProductClassification.categories;
     final sortedList = allCategories.toList()
@@ -128,23 +151,14 @@ class _HomePageState extends State<HomePage> {
     return sortedList;
   }
 
-  /// Filter and sort the products
-  List<Product> _filterProducts(
-      List<Product> baseProducts,
-      ProductSearchViewModel searchViewModel,
-      ) {
+  List<Product> _filterProducts(List<Product> baseProducts, ProductSearchViewModel searchViewModel) {
     final searchQuery = searchViewModel.searchQuery;
-
-    // Use Algolia results if query exists
     final List<Product> products = searchQuery.isNotEmpty
         ? searchViewModel.searchResults
         : baseProducts;
 
-    // Exclude products created by the current user
-    final visibleProducts =
-    products.where((product) => product.userId != userId).toList();
+    final visibleProducts = products.where((p) => p.userId != userId).toList();
 
-    // Filter by selected categories
     List<Product> filtered = _selectedCategories.isEmpty
         ? visibleProducts
         : visibleProducts.where((product) {
@@ -153,18 +167,15 @@ class _HomePageState extends State<HomePage> {
           productCategory.contains(selected.toLowerCase()));
     }).toList();
 
-    // Sort by date
     filtered.sort((a, b) {
       if (a.timestamp == null && b.timestamp == null) return 0;
       if (a.timestamp == null) return 1;
       if (b.timestamp == null) return -1;
-
       return _sortOrder == 'Newest first'
           ? b.timestamp!.compareTo(a.timestamp!)
           : a.timestamp!.compareTo(b.timestamp!);
     });
 
-    // Optional: sort by price if selected
     if (_sortPrice != null) {
       filtered.sort((a, b) {
         return _sortPrice == 'Price: Low to High'
@@ -182,23 +193,19 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search input
-            Padding(
-              padding: const EdgeInsets.only(top: 36.0),
-              child: searchBar.SearchBar(
-                hintText: 'Search products...',
-                onChanged: (value) {
-                  productSearchViewModel.updateSearchQuery(value);
-                },
-              ),
+            const SizedBox(height: 36.0),
+            searchBar.SearchBar(
+              hintText: 'Search products...',
+              onChanged: (value) {
+                productSearchViewModel.updateSearchQuery(value);
+              },
             ),
             const SizedBox(height: 16.0),
-
-            // Filter bar
             FilterBar(
               categories: _categoriesSortedByClicks,
               selectedCategories: _selectedCategories,
@@ -217,63 +224,21 @@ class _HomePageState extends State<HomePage> {
                   _sortPrice = selectedOrder;
                 });
               },
+              onAcademicCalendarSelected: (bool isActive) {
+                setState(() {
+                  _academicCalendarActive = isActive;
+                });
+              },
             ),
             const SizedBox(height: 16.0),
-
-            // Product grid
-            Expanded(
-              child: StreamBuilder<List<Product>>(
-                stream: _productRepo.getProductsStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "No products added yet",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    );
-                  }
-
-                  final allProducts = snapshot.data!;
-                  final filteredProducts = _filterProducts(
-                    allProducts,
-                    productSearchViewModel,
-                  );
-
-                  return GridView.builder(
-                    gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = filteredProducts[index];
-                      return ProductCard(
-                        product: product,
-                        onCategoryTap: (category) {
-                          _incrementCategoryClick(category);
-                        },
-                        // Registra el clic en el producto
-                        onProductTap: () {
-                          _registerProductClick(product);
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+            if (_smartRecommendedCategory != null &&
+                _selectedCategories.isEmpty &&
+                _allProducts != null)
+              _buildSmartRecommendationSection(),
+            if (_allProducts == null)
+              const Center(child: CircularProgressIndicator())
+            else
+              _buildMainProductGrid(productSearchViewModel),
           ],
         ),
       ),
@@ -282,4 +247,100 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildSmartRecommendationSection() {
+    final recommendedProducts = _allProducts!
+        .where((p) =>
+    p.category.toLowerCase() == _smartRecommendedCategory!.toLowerCase() &&
+        p.userId != userId)
+        .take(4)
+        .toList();
+
+    if (recommendedProducts.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.star, color: Color(0xFFF5C508)),
+              const SizedBox(width: 8),
+              const Text(
+                'Recommended now:',
+                style: TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _smartRecommendedCategory!,
+            style: const TextStyle(
+              fontFamily: 'Cabin',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recommendedProducts.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.75,
+            ),
+            itemBuilder: (context, index) {
+              final product = recommendedProducts[index];
+              return ProductCard(
+                product: product,
+                onCategoryTap: (category) => _incrementCategoryClick(category),
+                onProductTap: () => _registerProductClick(product),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainProductGrid(ProductSearchViewModel searchVM) {
+    final filteredProducts = _filterProducts(_allProducts!, searchVM);
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: filteredProducts.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.75,
+      ),
+      itemBuilder: (context, index) {
+        final product = filteredProducts[index];
+        return ProductCard(
+          product: product,
+          onCategoryTap: (category) => _incrementCategoryClick(category),
+          onProductTap: () => _registerProductClick(product),
+        );
+      },
+    );
+  }
 }
+
