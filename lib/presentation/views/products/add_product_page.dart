@@ -31,12 +31,15 @@ class _AddProductPageState extends State<AddProductPage> {
   bool _isFormValid = false;
 
   void _validateForm() {
+    final isOnline = Provider.of<AddProductViewModel>(context, listen: false).isOnline;
+
     setState(() {
-      _isFormValid = _images.isNotEmpty &&
+      _isFormValid =
           _nameController.text.isNotEmpty &&
-          _descriptionController.text.isNotEmpty &&
-          _selectedCategory != null &&
-          _priceController.text.isNotEmpty;
+              _descriptionController.text.isNotEmpty &&
+              _selectedCategory != null &&
+              _priceController.text.isNotEmpty &&
+              (isOnline ? _images.isNotEmpty : true); // ← Solo obliga imágenes si hay internet
     });
   }
 
