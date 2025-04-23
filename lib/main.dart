@@ -19,6 +19,8 @@ import 'package:senemarket/domain/repositories/auth_repository.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/domain/repositories/favorites_repository.dart';
+import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
+import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 
 // Vistas
 import 'package:senemarket/presentation/views/splash/splash_screen.dart';
@@ -43,19 +45,27 @@ import 'package:senemarket/presentation/views/favorites/viewmodel/favorites_view
 import 'package:senemarket/data/local/models/operation.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/core/services/connectivity_service.dart';
+import 'package:senemarket/core/services/notification_service.dart';
 
+import 'core/services/notification_service.dart';
 import 'data/datasources/product_remote_data_source.dart';
+import 'data/local/models/draft_product.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  final notificationService = NotificationService();
+  await notificationService.init();
   await FCMRemoteDataSource().setupFCM();
 
   // Inicialización de Hive
   await Hive.initFlutter();
   Hive.registerAdapter(OperationAdapter());
   Hive.registerAdapter(OperationTypeAdapter());
+  Hive.registerAdapter(DraftProductAdapter()); // ⬅️ ¡IMPORTANTE!
   await Hive.openBox<Operation>('operation_queue');
+  await Hive.openBox<DraftProduct>('draft_products'); // <-- Si usas esta box
+
 
   runApp(const SenemarketApp());
 }
@@ -69,11 +79,14 @@ class SenemarketApp extends StatefulWidget {
 
 class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserver {
   String? currentSessionId;
+  late final NotificationService notificationService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    notificationService = NotificationService();
+    notificationService.init();
     _logInitialActivity();
   }
 
@@ -139,8 +152,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
       operationQueue: operationQueue,
       connectivityService: connectivityService,
     );
-
-    productRepo.startQueueProcessor();
+    productRepo.startQueueProcessor(notificationService);
 
     return MultiProvider(
       providers: [
@@ -150,10 +162,20 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         Provider<FavoritesRepository>(create: (_) => FavoritesRepositoryImpl()),
         Provider<OperationQueue>(create: (_) => operationQueue),
         Provider<ConnectivityService>(create: (_) => connectivityService),
+        Provider<NotificationService>(create: (_) => notificationService),
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
-        ChangeNotifierProvider(create: (context) => AddProductViewModel(context.read<ProductRepository>())),
+        ChangeNotifierProvider(
+          create: (context) {
+            final vm = AddProductViewModel(context.read<ProductRepository>());
+            final connectivity = context.read<ConnectivityService>();
+            connectivity.isOnline$.listen((online) {
+              vm.setConnectivity(online); // ← esto lo usas para controlar validación dinámica
+            });
+            return vm;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
       child: MaterialApp(
@@ -197,7 +219,15 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
           '/my_products': (_) => const MyProductsPage(),
-        },
+          '/drafts': (_) => const MyDraftsPage(),
+          '/edit_draft': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments;
+            if (args is DraftProduct) {
+              return EditDraftPage(draft: args);
+            } else {
+              return const Scaffold(body: Center(child: Text('Draft not found')));
+            }
+          },        },
       ),
     );
   }

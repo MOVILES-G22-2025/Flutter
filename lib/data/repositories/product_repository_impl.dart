@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:algolia/algolia.dart';
+import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/services/connectivity_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
+import '../local/models/draft_product.dart';
 import '../local/models/operation.dart';
 import '../local/operation_queue.dart';
 import '../models/product_dto.dart';
@@ -60,6 +63,13 @@ class ProductRepositoryImpl implements ProductRepository {
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("No user logged in");
+
+    final online = await _connectivityService.isOnline$.first;
+    if (!online) {
+      print("🚫 Sin conexión: guardando como borrador");
+      await saveDraftProduct(product);
+      return;
+    }
 
     final imageUrls = await _remoteDataSource.uploadImages(images);
     if (imageUrls.isEmpty) throw Exception("No images uploaded");
@@ -146,6 +156,26 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
+  Future<void> saveDraftProduct(Product product) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("No user logged in");
+
+    final draft = DraftProduct(
+      id: const Uuid().v4(),
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      category: product.category,
+      userId: user.uid,
+      createdAt: DateTime.now(),
+    );
+
+    final box = await Hive.openBox<DraftProduct>('draft_products');
+    await box.put(draft.id, draft);
+
+    print("📝 Producto guardado como borrador con ID: ${draft.id}");
+  }
+
   /// Logs a product click event to Firestore for analytics.
   @override
   Future<void> logProductClick(String userId, String productId) async {
@@ -181,9 +211,15 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
 
-  void startQueueProcessor() {
+  void startQueueProcessor(NotificationService notificationService) {
     _connectivityService.isOnline$.listen((online) async {
       if (!online) return;
+
+      final box = await Hive.openBox<DraftProduct>('draft_products');
+      if (box.isNotEmpty) {
+        print("🔔 Hay productos en borrador: notificando");
+        await notificationService.showReminderNotification();
+      }
 
       final ops = _operationQueue.pending();
       for (final op in ops) {
@@ -196,9 +232,10 @@ class ProductRepositoryImpl implements ProductRepository {
             await _remoteDataSource.updateFavorites(productId, userId, value);
             await _operationQueue.remove(op.id);
           } catch (_) {
-            // Deja en la cola para reintentar luego
+            // Deja en cola para reintentar
           }
         }
       }
     });
-  }}
+  }
+}

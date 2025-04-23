@@ -11,6 +11,7 @@ class AddProductViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   String? errorMessage;
+  bool isOnline = true;
 
   AddProductViewModel(this._productRepository);
 
@@ -48,5 +49,11 @@ class AddProductViewModel extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners(); // Updates UI once done
+  }
+
+
+  void setConnectivity(bool value) {
+    isOnline = value;
+    notifyListeners();
   }
 }
