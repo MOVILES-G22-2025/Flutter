@@ -3,41 +3,69 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:senemarket/constants.dart' as constants;
+
+// Repos
 import 'package:senemarket/data/repositories/auth_repository_impl.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/data/repositories/favorites_repository_impl.dart';
 import 'package:senemarket/data/datasources/fcm_remote_data_source.dart';
 
+// Interfaces
 import 'package:senemarket/domain/repositories/auth_repository.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/domain/repositories/favorites_repository.dart';
+import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
+import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 
-import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
-import 'package:senemarket/presentation/views/favorites/viewmodel/favorites_viewmodel.dart';
-import 'package:senemarket/presentation/views/home_page.dart';
+// Vistas
+import 'package:senemarket/presentation/views/splash/splash_screen.dart';
 import 'package:senemarket/presentation/views/login/login_page.dart';
-import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/login/signin_page.dart';
 import 'package:senemarket/presentation/views/login/signup_page.dart';
+import 'package:senemarket/presentation/views/home_page.dart';
+import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/products/edit_product_page.dart';
 import 'package:senemarket/presentation/views/products/my_products_page.dart';
 import 'package:senemarket/presentation/views/profile/profile_page.dart';
-import 'package:senemarket/presentation/views/splash/splash_screen.dart';
+import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
 
-import 'package:senemarket/presentation/views/products/viewmodel/add_product_viewmodel.dart';
-import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
+// ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
 import 'package:senemarket/presentation/views/login/viewmodel/sign_up_viewmodel.dart';
+import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
+import 'package:senemarket/presentation/views/products/viewmodel/add_product_viewmodel.dart';
+import 'package:senemarket/presentation/views/favorites/viewmodel/favorites_viewmodel.dart';
 
-import 'package:senemarket/constants.dart' as constants;
+// Eventual connectivity
+import 'package:senemarket/data/local/models/operation.dart';
+import 'package:senemarket/data/local/operation_queue.dart';
+import 'package:senemarket/core/services/connectivity_service.dart';
+import 'package:senemarket/core/services/notification_service.dart';
+
+import 'core/services/notification_service.dart';
+import 'data/datasources/product_remote_data_source.dart';
+import 'data/local/models/draft_product.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  final notificationService = NotificationService();
+  await notificationService.init();
   await FCMRemoteDataSource().setupFCM();
+
+  // Inicialización de Hive
+  await Hive.initFlutter();
+  Hive.registerAdapter(OperationAdapter());
+  Hive.registerAdapter(OperationTypeAdapter());
+  Hive.registerAdapter(DraftProductAdapter()); // ⬅️ ¡IMPORTANTE!
+  await Hive.openBox<Operation>('operation_queue');
+  await Hive.openBox<DraftProduct>('draft_products'); // <-- Si usas esta box
+
 
   runApp(const SenemarketApp());
 }
@@ -51,14 +79,14 @@ class SenemarketApp extends StatefulWidget {
 
 class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserver {
   String? currentSessionId;
+  late final NotificationService notificationService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    print("Observador del ciclo de vida agregado.");
-
-    // Registra la actividad inicial, ya que didChangeAppLifecycleState no se dispara al iniciar.
+    notificationService = NotificationService();
+    notificationService.init();
     _logInitialActivity();
   }
 
@@ -73,7 +101,6 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         'endTime': null,
       });
       currentSessionId = docRef.id;
-      print("Actividad inicial registrada, ID: $currentSessionId");
     } catch (e) {
       print("Error al registrar la actividad inicial: $e");
     }
@@ -83,14 +110,10 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-    print("Observador del ciclo de vida removido.");
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    print("La aplicación cambió de estado: $state");
-
-    // Siempre asigna 'anonymous' si no hay usuario autenticado.
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid ?? 'anonymous';
     final firestore = FirebaseFirestore.instance;
@@ -98,24 +121,20 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
 
     if (state == AppLifecycleState.resumed) {
       try {
-        // Registra una nueva actividad al volver a primer plano.
         final docRef = await firestore.collection('activities').add({
           'userId': userId,
           'startTime': now,
           'endTime': null,
         });
         currentSessionId = docRef.id;
-        print("Actividad iniciada, ID: $currentSessionId");
       } catch (e) {
         print("Error al crear actividad: $e");
       }
     } else if (state == AppLifecycleState.paused && currentSessionId != null) {
       try {
-        // Actualiza la actividad actual con la hora de cierre.
         await firestore.collection('activities').doc(currentSessionId).update({
           'endTime': now,
         });
-        print("Actividad actualizada, ID: $currentSessionId");
         currentSessionId = null;
       } catch (e) {
         print("Error al actualizar actividad: $e");
@@ -125,16 +144,38 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    final operationQueue = OperationQueue();
+    final connectivityService = ConnectivityService();
+    final productRepo = ProductRepositoryImpl(
+      remoteDataSource: ProductRemoteDataSource(), // 👈 asegúrate de que se pasa
+      firestore: FirebaseFirestore.instance,
+      operationQueue: operationQueue,
+      connectivityService: connectivityService,
+    );
+    productRepo.startQueueProcessor(notificationService);
+
     return MultiProvider(
       providers: [
         Provider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
-        Provider<ProductRepository>(create: (_) => ProductRepositoryImpl()),
+        Provider<ProductRepository>(create: (_) => productRepo),
         Provider<UserRepository>(create: (_) => UserRepositoryImpl()),
         Provider<FavoritesRepository>(create: (_) => FavoritesRepositoryImpl()),
+        Provider<OperationQueue>(create: (_) => operationQueue),
+        Provider<ConnectivityService>(create: (_) => connectivityService),
+        Provider<NotificationService>(create: (_) => notificationService),
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
-        ChangeNotifierProvider(create: (context) => AddProductViewModel(context.read<ProductRepository>())),
+        ChangeNotifierProvider(
+          create: (context) {
+            final vm = AddProductViewModel(context.read<ProductRepository>());
+            final connectivity = context.read<ConnectivityService>();
+            connectivity.isOnline$.listen((online) {
+              vm.setConnectivity(online); // ← esto lo usas para controlar validación dinámica
+            });
+            return vm;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
       child: MaterialApp(
@@ -143,13 +184,13 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         theme: ThemeData(
           fontFamily: 'Cabin',
           scaffoldBackgroundColor: constants.AppColors.primary30,
-          primaryColor: constants.AppColors.primary30, // << añade esto
+          primaryColor: constants.AppColors.primary30,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: constants.AppColors.primary30, // afecta cursor y campos activos
+            seedColor: constants.AppColors.primary30,
             primary: constants.AppColors.primary30,
           ),
           textSelectionTheme: TextSelectionThemeData(
-            cursorColor: constants.AppColors.primary30,       // ← cursor “|” morado → primary30
+            cursorColor: constants.AppColors.primary30,
             selectionColor: constants.AppColors.primary30.withOpacity(0.4),
             selectionHandleColor: constants.AppColors.primary30,
           ),
@@ -157,12 +198,12 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
             labelStyle: const TextStyle(
               fontFamily: 'Cabin',
               fontSize: 16,
-              color: constants.AppColors.primary0, // ← label normal
+              color: constants.AppColors.primary0,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(1),
               borderSide: const BorderSide(
-                color: constants.AppColors.primary50, // ← label activo y borde
+                color: constants.AppColors.primary50,
                 width: 2.0,
               ),
             ),
@@ -178,7 +219,15 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
           '/my_products': (_) => const MyProductsPage(),
-        },
+          '/drafts': (_) => const MyDraftsPage(),
+          '/edit_draft': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments;
+            if (args is DraftProduct) {
+              return EditDraftPage(draft: args);
+            } else {
+              return const Scaffold(body: Center(child: Text('Draft not found')));
+            }
+          },        },
       ),
     );
   }

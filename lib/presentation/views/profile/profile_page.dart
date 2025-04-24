@@ -149,9 +149,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildOptionTile('My products', Icons.shopping_bag, () {
                   Navigator.pushNamed(context, '/my_products');
                 }),
-                _buildOptionTile('Futures sections', Icons.notifications, () {}),
-                _buildOptionTile('Futures sections', Icons.notifications, () {}),
-                _buildOptionTile('Futures sections', Icons.notifications, () {}),
+                _buildOptionTile('My drafts', Icons.pending_actions, () {
+                  Navigator.pushNamed(context, '/drafts');
+                }),
+                _buildOptionTile('My products', Icons.shopping_bag, () {
+                  Navigator.pushNamed(context, '/my_products');
+                }),
+                _buildOptionTile('Favorites', Icons.favorite, () {
+                  Navigator.pushNamed(context, '/favorites');
+                }),
                 const SizedBox(height: 90),
               ],
             ),
