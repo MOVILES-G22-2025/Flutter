@@ -191,6 +191,7 @@ class ProductDetailPageContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
             Row(
               children: [
                 Expanded(
@@ -204,24 +205,16 @@ class ProductDetailPageContent extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text("Buy Now"),
+                    child: const Text("Buy now", style: TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary50,
+                    ),),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary30,
-                      foregroundColor: AppColors.primary0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text("Add to Cart"),
-                  ),
-                ),
+
               ],
             ),
             const SizedBox(height: 90),

@@ -1,6 +1,7 @@
-// lib/presentation/widgets/full_screen_image_page.dart
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/services/custom_cache_manager.dart';
 
 class FullScreenImagePage extends StatelessWidget {
   final String imageUrl;
@@ -23,10 +24,14 @@ class FullScreenImagePage extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(
-            imageUrl,
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            cacheManager: CustomCacheManager.instance,
             fit: BoxFit.contain,
-          ),
+            placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
+            errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
+          )
+
         ),
       ),
     );

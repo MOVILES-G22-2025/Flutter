@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/product_detail_page.dart';
 
+import '../../../../core/services/custom_cache_manager.dart';
+
 /// UI card to display a single [Product].
 /// Calls [onCategoryTap] when the category is tapped (optional) and [onProductTap] when the card is tapped.
 class ProductCard extends StatelessWidget {
@@ -57,8 +59,9 @@ class ProductCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: (imageUrl != null)
-                    ? CachedNetworkImage(
+                    ? CachedNetworkImage( //Caching strategy
                   imageUrl: imageUrl,
+                  cacheManager: CustomCacheManager.instance,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(

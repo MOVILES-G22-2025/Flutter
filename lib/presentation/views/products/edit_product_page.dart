@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -6,8 +7,10 @@ import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/edit_product_viewmodel.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+import '../../../core/services/custom_cache_manager.dart';
+import '../../widgets/global/error_text.dart';
 import '../../widgets/global/full_screen_image_page.dart';
 
 class EditProductPage extends StatefulWidget {
@@ -23,13 +26,15 @@ class _EditProductPageState extends State<EditProductPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   List<String> _existingImages = [];   // Already uploaded image URLs
   List<String> _originalImages = [];   // For detecting deletions
   List<XFile?> _newImages = [];        // New images picked from gallery/camera
 
   String? _selectedCategory;
-  final ImagePicker _picker = ImagePicker();
+  String? _priceError;
+  String? _nameError;
 
   @override
   void initState() {
@@ -53,7 +58,7 @@ class _EditProductPageState extends State<EditProductPage> {
   // Pick image from gallery or camera
   Future<void> _pickImage(ImageSource source) async {
     if (_existingImages.length + _newImages.length >= 5) {
-      _showSnackBar("Max 5 images allowed.");
+      _showSnackBar("Max 5 images allowed");
       return;
     }
 
@@ -113,7 +118,7 @@ class _EditProductPageState extends State<EditProductPage> {
         _descriptionController.text.isEmpty ||
         _selectedCategory == null ||
         (_existingImages.isEmpty && _newImages.isEmpty)) {
-      _showSnackBar('Please fill all fields and add at least one image.');
+      _showSnackBar('Please fill all the fields');
       return;
     }
 
@@ -154,7 +159,13 @@ class _EditProductPageState extends State<EditProductPage> {
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
-        title: const Text('Edit Product', style: TextStyle(fontFamily: 'Cabin', color: Colors.black, fontSize: 24)),
+        title: const Text('Edit Product', style: TextStyle(
+          fontFamily: 'Cabin',
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: constants.AppColors.primary0,
+        ),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -167,7 +178,7 @@ class _EditProductPageState extends State<EditProductPage> {
               spacing: 15,
               runSpacing: 15,
               children: [
-// Existing images
+                // Existing images
                 ..._existingImages.asMap().entries.map((entry) {
                   return GestureDetector(
                     onTap: () => _openFullScreen(entry.value),
@@ -175,12 +186,21 @@ class _EditProductPageState extends State<EditProductPage> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            entry.value,
+                          child: CachedNetworkImage(
+                            imageUrl: entry.value,
+                            cacheManager: CustomCacheManager.instance,
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,
-                          ),
+                            placeholder: (_, __) => Container(
+                              color: Colors.grey[300],
+                              child: const Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.error, size: 24, color: Colors.red),
+                            ),
+                          )
                         ),
                         Positioned(
                           top: 5,
@@ -199,7 +219,7 @@ class _EditProductPageState extends State<EditProductPage> {
                   );
                 }),
 
-// New images
+                // New images
                 ..._newImages.asMap().entries.map((entry) {
                   final image = entry.value!;
                   return GestureDetector(
@@ -255,8 +275,15 @@ class _EditProductPageState extends State<EditProductPage> {
             CustomTextField(
               label: 'Name',
               controller: _nameController,
-              onChanged: (_) {},
+              onChanged: (value) {
+                if (value.length > 40) {
+                  setState(() => _nameError = constants.ErrorMessages.maxChar);
+                } else {
+                  setState(() => _nameError = null);
+                }
+              },
             ),
+            ErrorText(_nameError),
             const SizedBox(height: 12),
             CustomTextField(
               label: 'Description',
@@ -272,12 +299,17 @@ class _EditProductPageState extends State<EditProductPage> {
                 setState(() => _selectedCategory = val);
               },
             ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              label: 'Price',
-              controller: _priceController,
-              onChanged: (_) {},
+            CustomTextField(controller: _priceController, label: 'Price', isNumeric: true,
+              onChanged: (value) {
+                final intPrice = int.tryParse(value);
+                if (intPrice != null && (intPrice < 1000)) {
+                  setState(() => _priceError = constants.ErrorMessages.priceRange);
+                } else {
+                  setState(() => _priceError = null);
+                }
+              },
             ),
+            ErrorText(_priceError),
 
             const SizedBox(height: 20),
 
@@ -292,8 +324,14 @@ class _EditProductPageState extends State<EditProductPage> {
               ),
               child: viewModel.isLoading
                   ? const CircularProgressIndicator()
-                  : const Text('Save Changes',
-                  style: TextStyle(fontFamily: 'Cabin', color: Colors.white, fontSize: 16)),
+                  : const Text('Save changes',
+                style: TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: constants.AppColors.primary50,
+                ),
+              ),
             ),
             const SizedBox(height: 30),
           ],
@@ -305,12 +343,16 @@ class _EditProductPageState extends State<EditProductPage> {
 
   // Validate all form fields and images
   bool _isFormValid() {
-    final hasImages = _existingImages.isNotEmpty || _newImages.isNotEmpty;
+    final name = _nameController.text.trim();
     final price = double.tryParse(_priceController.text);
-    return _nameController.text.isNotEmpty &&
-        _descriptionController.text.isNotEmpty &&
-        _selectedCategory != null &&
-        price != null &&
-        hasImages;
+    final hasImages = _existingImages.isNotEmpty || _newImages.isNotEmpty;
+
+    final nameValid = name.isNotEmpty && name.length <= 40;
+    final priceValid = price != null && price >= 1000;
+    final descriptionValid = _descriptionController.text.isNotEmpty;
+    final categoryValid = _selectedCategory != null;
+
+    return nameValid && priceValid && descriptionValid && categoryValid && hasImages;
   }
+
 }

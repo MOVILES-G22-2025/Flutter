@@ -7,6 +7,7 @@ class CustomTextField extends StatelessWidget {
   final String label;
   final bool isNumeric;
   final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
 
   const CustomTextField({
     Key? key,
@@ -14,6 +15,7 @@ class CustomTextField extends StatelessWidget {
     required this.label,
     this.isNumeric = false,
     this.onChanged,
+    this.focusNode,
   }) : super(key: key);
 
   @override
@@ -22,6 +24,7 @@ class CustomTextField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6.0), // <-- Espacio automático
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         inputFormatters: isNumeric ? [FilteringTextInputFormatter.digitsOnly] : null,
         style: const TextStyle(

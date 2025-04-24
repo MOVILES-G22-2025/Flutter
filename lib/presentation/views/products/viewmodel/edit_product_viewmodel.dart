@@ -1,9 +1,9 @@
-// lib/presentation/views/products/viewmodel/edit_product_viewmodel.dart
-
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
+
+import '../../../../core/services/custom_cache_manager.dart';
 
 class EditProductViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
@@ -41,4 +41,15 @@ class EditProductViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<void> clearEditedImagesFromCache(List<String> oldUrls, List<String> updatedUrls) async {
+    final manager = CustomCacheManager.instance;
+
+    for (final url in oldUrls) {
+      if (!updatedUrls.contains(url)) {
+        await manager.removeFile(url); //Borra imágenes que ya no están
+      }
+    }
+  }
+
 }

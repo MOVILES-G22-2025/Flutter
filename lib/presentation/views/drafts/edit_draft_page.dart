@@ -6,7 +6,7 @@ import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/drafts/viewmodel/edit_draft_viewmodel.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 
 import '../../../data/local/models/draft_product.dart';
