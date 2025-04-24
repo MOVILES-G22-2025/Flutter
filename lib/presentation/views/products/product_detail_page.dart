@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/favorites_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/product_detail_viewmodel.dart';
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 
 import '../../../domain/repositories/product_repository.dart';
 
@@ -19,7 +19,6 @@ class ProductDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Provee el ViewModel y lo inicializa con el producto
     return ChangeNotifierProvider(
       create: (_) => ProductDetailViewModel(
         context.read<ProductRepository>(),
@@ -57,56 +56,6 @@ class ProductDetailPageContent extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.primary40,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary30,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text("Buy Now"),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary20,
-                  foregroundColor: AppColors.primary0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text("Add to Cart"),
-              ),
-            ),
-          ],
         ),
       ),
       body: SingleChildScrollView(
@@ -241,10 +190,45 @@ class ProductDetailPageContent extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary30,
+                      foregroundColor: AppColors.primary0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text("Buy Now"),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary30,
+                      foregroundColor: AppColors.primary0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text("Add to Cart"),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 90),
           ],
         ),
       ),
+      bottomNavigationBar: const NavigationBarApp(selectedIndex: 0),
     );
   }
 }
