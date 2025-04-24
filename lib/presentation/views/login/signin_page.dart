@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/password/confirm_password_field.dart';
+import 'package:senemarket/presentation/widgets/global/errors/error_text.dart';
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
 
-/// UI for user sign-in.
-/// Uses SignInViewModel to manage authentication logic and state.
+import '../../widgets/global/errors/error_messages.dart';
+
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
 
@@ -16,7 +19,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  String _errorMessage = '';
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -48,21 +51,19 @@ class _SignInPageState extends State<SignInPage> {
                 const SizedBox(height: 24),
 
                 // Email and password fields
-                _buildTextField('Uniandes email', _emailController),
-                _buildTextField('Password', _passwordController, obscureText: true),
+                CustomTextField(
+                  controller: _emailController,
+                  label: 'Uniandes email',
+                ),
+                ConfirmPasswordField(
+                  controller: _passwordController,
+                  label: 'Password',
+                ),
                 const SizedBox(height: 10),
 
-                // Local and server error messages
-                if (_errorMessage.isNotEmpty)
-                  Text(
-                    _errorMessage,
-                    style: const TextStyle(color: AppColors.primary30, fontSize: 14),
-                  ),
-                if (signInVM.errorMessage.isNotEmpty)
-                  Text(
-                    signInVM.errorMessage,
-                    style: const TextStyle(color: AppColors.primary30, fontSize: 14),
-                  ),
+                // Error texts
+                ErrorText(_errorMessage),
+                ErrorText(signInVM.errorMessage),
                 const SizedBox(height: 10),
 
                 // Sign-in button
@@ -95,64 +96,29 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  /// Validates fields and triggers sign-in via ViewModel.
   Future<void> _signIn() async {
     final signInVM = context.read<SignInViewModel>();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     setState(() {
-      _errorMessage = '';
+      _errorMessage = null;
     });
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'All fields must be filled out');
+      setState(() => _errorMessage = ErrorMessages.allFieldsRequired);
       return;
     }
 
     if (!email.endsWith('@uniandes.edu.co')) {
-      setState(() => _errorMessage = 'You must use an @uniandes.edu.co email');
+      setState(() => _errorMessage = ErrorMessages.invalidEmailDomain);
       return;
     }
 
     await signInVM.signIn(email, password);
+
     if (signInVM.errorMessage.isEmpty) {
       Navigator.pushReplacementNamed(context, '/home');
     }
-  }
-
-  /// Builds styled text fields.
-  Widget _buildTextField(String hintText, TextEditingController controller, {bool obscureText = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        style: const TextStyle(
-          fontFamily: 'Cabin',
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: AppColors.primary0,
-        ),
-        decoration: InputDecoration(
-          hintText: hintText,
-          filled: true,
-          fillColor: AppColors.primary50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.primary0, width: 2.0),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.primary0, width: 2.0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.primary30, width: 2.0),
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-        ),
-      ),
-    );
   }
 }

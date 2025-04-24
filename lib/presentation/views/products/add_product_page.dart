@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/constants.dart' as constants;
@@ -185,6 +185,12 @@ class _AddProductPageState extends State<AddProductPage> {
                     onPickImageFromCamera: _pickImageFromCamera,
                     onPickImageFromGallery: _pickImageFromGallery,
                     image: _images,
+                    onRemoveImage: (index) {
+                      setState(() {
+                        _images.removeAt(index);
+                        _validateForm();
+                      });
+                    },
                   ),
                   CustomTextField(
                     label: 'Name',
