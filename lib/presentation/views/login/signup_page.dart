@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/widgets/form_fields/password/confirm_password_field.dart';
+import '../../../constants.dart' as constants;
 import '../../widgets/form_fields/custom_field.dart';
 import '../../widgets/form_fields/password/password_field.dart';
-import '../../widgets/global/errors/error_messages.dart';
-import '../../widgets/global/errors/error_text.dart';
+import '../../widgets/global/error_text.dart';
 import 'viewmodel/sign_up_viewmodel.dart';
 
 /// Page to create a new user account.
@@ -31,7 +31,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _localErrorMessage;
   String? _nameLengthError;
   String? _emailFormatError;
-  String? _careerLengthError;
+  String? _selectedCareer;
   String? _semesterRangeError;
   String? _passwordMatchError;
 
@@ -104,16 +104,36 @@ class _SignUpPageState extends State<SignUpPage> {
                 const SizedBox(height: 8),
 
                 // Career
-                CustomTextField(controller: _careerController, label: 'Career',
-                  onChanged: (value) {
-                  if (value.length > 40) {
-                    setState(() => _careerLengthError = ErrorMessages.maxChar);
-                  } else {
-                    setState(() => _careerLengthError = null);
-                  }
-                },
+                const SizedBox(height: 12),
+
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<String>.empty();
+                    }
+                    return constants.Careers.careers.where((String option) {
+                      return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                    });
+                  },
+                  onSelected: (String selection) {
+                    setState(() {
+                      _selectedCareer = selection;
+                    });
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                    controller.text = _selectedCareer ?? '';
+                    return CustomTextField(
+                      label: 'Main Career',
+                      controller: controller,
+                      focusNode: focusNode,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCareer = value;
+                        });
+                      },
+                    );
+                  },
                 ),
-                ErrorText(_careerLengthError),
                 const SizedBox(height: 8),
 
                 //Semester

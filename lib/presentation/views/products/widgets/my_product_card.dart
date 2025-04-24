@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/constants.dart';
 
+import '../../../../core/services/custom_cache_manager.dart';
+
 class MyProductCard extends StatefulWidget {
   final Product product;
   final VoidCallback? onEdit;
@@ -67,8 +69,9 @@ class _MyProductCardState extends State<MyProductCard> {
                   borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(20)),
                   child: (imageUrl != null)
-                      ? CachedNetworkImage(
+                      ? CachedNetworkImage( //Caching strategy
                     imageUrl: imageUrl,
+                    cacheManager: CustomCacheManager.instance,
                     height: 120,
                     width: double.infinity,
                     fit: BoxFit.cover,

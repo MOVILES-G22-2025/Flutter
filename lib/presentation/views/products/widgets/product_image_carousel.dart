@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../widgets/global/full_screen_image_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:senemarket/core/services/custom_cache_manager.dart';
 
 /// Carousel to show product images.
 /// User can swipe or tap arrows to navigate.
@@ -74,13 +76,24 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
                   padding: const EdgeInsets.symmetric(horizontal: 5.0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(30),
-                    child: Image.network(
-                      imageUrl,
+                    child: CachedNetworkImage(  //Caching strategy
+                      imageUrl: imageUrl,
+                      //Almacenar e n cache local por 30 dias
+                      cacheManager: CustomCacheManager.instance,
                       width: double.infinity,
                       height: 350,
                       fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: Colors.grey[300],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.error, size: 50, color: Colors.red),
+                      ),
                     ),
                   ),
+
                 ),
               );
             },
