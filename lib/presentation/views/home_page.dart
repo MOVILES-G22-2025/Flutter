@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
               const Icon(Icons.star, color: Color(0xFFF5C508)),
               const SizedBox(width: 8),
               const Text(
-                'Recommended now:',
+                'Recommended now',
                 style: TextStyle(
                   fontFamily: 'Cabin',
                   fontSize: 16,
@@ -293,7 +293,6 @@ class _HomePageState extends State<HomePage> {
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
