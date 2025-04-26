@@ -8,6 +8,7 @@ import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/constants.dart' as constants;
 
+import '../../widgets/global/error_text.dart';
 import 'viewmodel/add_product_viewmodel.dart';
 
 class AddProductPage extends StatefulWidget {
@@ -29,19 +30,32 @@ class _AddProductPageState extends State<AddProductPage> {
 
   String? _selectedCategory;
   bool _isFormValid = false;
+  String? _nameError;
+  String? _priceError;
 
   void _validateForm() {
     final isOnline = Provider.of<AddProductViewModel>(context, listen: false).isOnline;
 
+    final name = _nameController.text.trim();
+    final priceText = _priceController.text.trim();
+    final price = double.tryParse(priceText);
+
     setState(() {
-      _isFormValid =
-          _nameController.text.isNotEmpty &&
-              _descriptionController.text.isNotEmpty &&
-              _selectedCategory != null &&
-              _priceController.text.isNotEmpty &&
-              (isOnline ? _images.isNotEmpty : true); // ← Solo obliga imágenes si hay internet
+      _nameError = (name.length > 40) ? constants.ErrorMessages.maxChar : null;
+      _priceError = (price == null || price < 1000)
+          ? 'Minimum price is \$1000'
+          : null;
+
+      _isFormValid = _nameError == null &&
+          _priceError == null &&
+          name.isNotEmpty &&
+          _descriptionController.text.isNotEmpty &&
+          _selectedCategory != null &&
+          priceText.isNotEmpty &&
+          (isOnline ? _images.isNotEmpty : true);
     });
   }
+
 
   Future<void> _pickImageFromCamera() async {
     if (_images.length >= 5) {
@@ -59,7 +73,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
   Future<void> _pickImageFromGallery() async {
     if (_images.length >= 5) {
-      _showSnackBar("You can only upload up to 5 images");
+      _showSnackBar("Max 5 images allowed");
       return;
     }
     final XFile? pickedImage = await _picker.pickImage(source: ImageSource.gallery);
@@ -86,11 +100,11 @@ class _AddProductPageState extends State<AddProductPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => AlertDialog(
+          builder: (_) => const AlertDialog(
             backgroundColor: Colors.white,
             content: Column(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text("Publishing product..."),
@@ -197,6 +211,8 @@ class _AddProductPageState extends State<AddProductPage> {
                     controller: _nameController,
                     onChanged: (_) => _validateForm(),
                   ),
+                  ErrorText(_nameError),
+
                   const SizedBox(height: 12),
                   CustomTextField(
                     label: 'Description',
@@ -216,11 +232,18 @@ class _AddProductPageState extends State<AddProductPage> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  CustomTextField(
-                    label: 'Price',
-                    controller: _priceController,
-                    onChanged: (_) => _validateForm(),
+
+                  CustomTextField(controller: _priceController, label: 'Price', isNumeric: true,
+                    onChanged: (value) {
+                      final intPrice = int.tryParse(value);
+                      if (intPrice != null && (intPrice < 1000)) {
+                        setState(() => _priceError = constants.ErrorMessages.priceRange);
+                      } else {
+                        setState(() => _priceError = null);
+                      }
+                    },
                   ),
+                  ErrorText(_priceError),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_textfield.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
 import 'package:senemarket/presentation/widgets/form_fields/password/confirm_password_field.dart';
-import 'package:senemarket/presentation/widgets/global/errors/error_text.dart';
+import 'package:senemarket/presentation/widgets/global/error_text.dart';
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
-
-import '../../widgets/global/errors/error_messages.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);

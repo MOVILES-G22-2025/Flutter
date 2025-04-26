@@ -29,3 +29,62 @@ class ProductClassification {
     "Sports and fitness"
   ];
 }
+
+class Careers {
+  static const List<String> careers = [
+    "Directed Studies",
+    "Administration",
+    "Economy",
+    "Government and Public Affairs",
+    "Biology",
+    "Physics",
+    "Geosciences",
+    "Math",
+    "Microbiology",
+    "Chemistry",
+    "Medicine",
+    "Architecture",
+    "Art",
+    "Design",
+    "History of Art",
+    "Literature",
+    "Music",
+    "Digital Narratives",
+    "Environmental Engineering",
+    "Biomedical Engineering",
+    "Civil Engineering",
+    "Electrical Engineering",
+    "Electronic Engineering",
+    "Industrial Engineering",
+    "Mechanical Engineering",
+    "Chemical Engineering",
+    "Systems and Computer Engineering ",
+    "Law",
+    "Anthropology",
+    "Political Science",
+    "Global Studies",
+    "Philosophy",
+    "History",
+    "Languages and Culture",
+    "Psychology",
+    "Bachelor of Arts",
+    "Bachelor of Biology",
+    "Bachelor's Degree in Early Childhood Education",
+    "Bachelor's Degree in Spanish and Philology",
+    "Bachelor of Philosophy",
+    "Bachelor's Degree in Physics",
+    "Bachelor of History",
+    "Bachelor of Mathematics",
+    "Bachelor's Degree in Chemistry",
+  ];
+}
+
+class ErrorMessages {
+  static const String allFieldsRequired = 'All fields must be filled out';
+  static const String invalidEmailDomain = 'You must use an @uniandes.edu.co email';
+  static const String passwordsDoNotMatch = 'Passwords do not match';
+  static const String weakPassword = 'Weak password';
+  static const String maxChar = 'Maximum 40 characters allowed';
+  static const String semesterRange = 'Invalid semester';
+  static const String priceRange = 'Minimum price is \$1000';
+}

@@ -1,9 +1,10 @@
-// lib/presentation/views/products/viewmodel/edit_product_viewmodel.dart
-
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
+
+import '../../../../core/services/custom_cache_manager.dart';
 
 class EditProductViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
@@ -39,6 +40,26 @@ class EditProductViewModel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  //Isolate strategy
+  Future<void> clearEditedImagesFromCache(List<String> oldUrls, List<String> updatedUrls) async {
+    await compute(_clearImagesWorker, {
+      'oldUrls': oldUrls,
+      'updatedUrls': updatedUrls,
+    });
+  }
+
+  void _clearImagesWorker(Map<String, dynamic> args) async {
+    final oldUrls = List<String>.from(args['oldUrls']);
+    final updatedUrls = List<String>.from(args['updatedUrls']);
+    final manager = CustomCacheManager.instance;
+
+    for (final url in oldUrls) {
+      if (!updatedUrls.contains(url)) {
+        await manager.removeFile(url);
+      }
     }
   }
 }
