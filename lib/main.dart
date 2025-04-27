@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -12,8 +13,8 @@ import 'package:senemarket/data/repositories/auth_repository_impl.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
 import 'package:senemarket/data/repositories/favorites_repository_impl.dart';
-import 'package:senemarket/data/datasources/fcm_remote_data_source.dart';
 import 'package:senemarket/data/repositories/chat_repository_impl.dart';
+import 'package:senemarket/data/datasources/fcm_remote_data_source.dart';
 
 // Interfaces
 import 'package:senemarket/domain/repositories/auth_repository.dart';
@@ -21,6 +22,15 @@ import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/domain/repositories/favorites_repository.dart';
 import 'package:senemarket/domain/repositories/chat_repository.dart';
+
+// Servicios
+import 'package:senemarket/core/services/connectivity_service.dart';
+import 'package:senemarket/core/services/notification_service.dart';
+
+// Local
+import 'package:senemarket/data/local/models/operation.dart';
+import 'package:senemarket/data/local/operation_queue.dart';
+import 'package:senemarket/data/local/models/draft_product.dart';
 
 // ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
@@ -39,31 +49,25 @@ import 'package:senemarket/presentation/views/login/signup_page.dart';
 import 'package:senemarket/presentation/views/home_page.dart';
 import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/products/my_products_page.dart';
-import 'package:senemarket/presentation/views/profile/profile_page.dart';
 import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
+import 'package:senemarket/presentation/views/profile/profile_page.dart';
 import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
 import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_list_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_page.dart';
 
-// Eventual connectivity
-import 'package:senemarket/data/local/models/operation.dart';
-import 'package:senemarket/data/local/operation_queue.dart';
-import 'package:senemarket/core/services/connectivity_service.dart';
-import 'package:senemarket/core/services/notification_service.dart';
-import 'package:senemarket/data/datasources/product_remote_data_source.dart';
-import 'package:senemarket/data/local/models/draft_product.dart';
+import 'data/datasources/product_remote_data_source.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Setup de notificaciones y FCM
+  // Notificaciones y FCM
   final notificationService = NotificationService();
   await notificationService.init();
   await FCMRemoteDataSource().setupFCM();
 
-  // Inicialización de Hive
+  // Hive
   await Hive.initFlutter();
   Hive.registerAdapter(OperationAdapter());
   Hive.registerAdapter(OperationTypeAdapter());
@@ -105,7 +109,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
       });
       _currentSessionId = docRef.id;
     } catch (e) {
-      print('Error al registrar la actividad inicial: \$e');
+      print('Error al registrar la actividad inicial: $e');
     }
   }
 
@@ -114,7 +118,6 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
     final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
     final now = Timestamp.now();
     final firestore = FirebaseFirestore.instance;
-
     if (state == AppLifecycleState.resumed) {
       final docRef = await firestore.collection('activities').add({
         'userId': userId,
@@ -138,6 +141,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    // Instancias compartidas
     final operationQueue = OperationQueue();
     final connectivityService = ConnectivityService();
     final productRepo = ProductRepositoryImpl(
@@ -156,10 +160,12 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         Provider<UserRepository>(create: (_) => UserRepositoryImpl()),
         Provider<FavoritesRepository>(create: (_) => FavoritesRepositoryImpl()),
         Provider<ChatRepository>(create: (_) => ChatRepositoryImpl()),
+
         // Servicios
         Provider<OperationQueue>(create: (_) => operationQueue),
         Provider<ConnectivityService>(create: (_) => connectivityService),
         Provider<NotificationService>(create: (_) => _notificationService),
+
         // ViewModels
         ChangeNotifierProvider(create: (_) => ChatListViewModel()),
         ChangeNotifierProvider(create: (ctx) => SignInViewModel(ctx.read<AuthRepository>())),
@@ -202,16 +208,19 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/chat': (ctx) {
             final args = ModalRoute.of(ctx)!.settings.arguments as Map<String, dynamic>;
             final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+            final receiverId = args['receiverId'] as String;
+            final receiverName = args['receiverName'] as String;
             return ChangeNotifierProvider(
               create: (_) => ChatViewModel(
                 ctx.read<ChatRepository>(),
+                ctx.read<ConnectivityService>(), // ← aquí
+                ctx.read<OperationQueue>(),      // ← y aquí
                 currentUserId,
-                args['receiverId']!,
+                receiverId,
               ),
-              child: ChatPage(receiverName: args['receiverName']!),
+              child: ChatPage(receiverName: receiverName),
             );
           },
-
         },
       ),
     );
