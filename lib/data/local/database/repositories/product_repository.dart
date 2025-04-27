@@ -1,32 +1,31 @@
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';
-import '../models/product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductRepository {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   // Insertar un producto
-  Future<void> insertProducto(Map<String, dynamic> producto) async {
+  Future<void> insertProduct(Map<String, dynamic> product) async {
     final db = await _databaseHelper.database;
     await db.insert(
-      'productos',  // Nombre de la tabla
-      producto,     // Mapa con los datos del producto
+      'products',  // Nombre de la tabla
+      product,     // Mapa con los datos del producto
       conflictAlgorithm: ConflictAlgorithm.replace,  // Si hay conflicto, reemplaza el dato
     );
   }
 
   // Obtener todos los productos
-  Future<List<Map<String, dynamic>>> getProductos() async {
+  Future<List<Map<String, dynamic>>> getProducts() async {
     final db = await _databaseHelper.database;
-    return await db.query('productos');  // Realiza un SELECT de todos los productos
+    return await db.query('products');  // Realiza un SELECT de todos los productos
   }
 
   // Obtener un producto por su ID
-  Future<Map<String, dynamic>?> getProductoById(String id) async {
+  Future<Map<String, dynamic>?> getProductById(String id) async {
     final db = await _databaseHelper.database;
     List<Map<String, dynamic>> result = await db.query(
-      'productos',
+      'products',
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -34,21 +33,21 @@ class ProductRepository {
   }
 
   // Actualizar un producto
-  Future<void> updateProducto(Map<String, dynamic> producto) async {
+  Future<void> updateProduct(Map<String, dynamic> product) async {
     final db = await _databaseHelper.database;
     await db.update(
-      'productos',
-      producto,  // Mapa con los datos a actualizar
+      'products',
+      product,  // Mapa con los datos a actualizar
       where: 'id = ?',  // Condición para encontrar el producto
-      whereArgs: [producto['id']],
+      whereArgs: [product['id']],
     );
   }
 
   // Eliminar un producto
-  Future<void> deleteProducto(String id) async {
+  Future<void> deleteProduct(String id) async {
     final db = await _databaseHelper.database;
     await db.delete(
-      'productos',
+      'products',
       where: 'id = ?',  // Condición para eliminar el producto por ID
       whereArgs: [id],
     );
@@ -60,14 +59,14 @@ class ProductRepository {
     await db.transaction((txn) async {
       // Insertar un nuevo producto
       await txn.insert(
-        'productos',
-        {'name': 'Producto 2', 'price': 30.00},
+        'products',
+        {'name': 'Product 2', 'price': 30.00},
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       // Actualizar otro producto
       await txn.update(
-        'productos',
+        'products',
         {'name': 'Producto actualizado', 'price': 35.00},
         where: 'id = ?',
         whereArgs: [1],
@@ -77,34 +76,34 @@ class ProductRepository {
 
   // Sincronizar productos con Firebase
   // Dentro de la clase ProductRepository
-  Future<void> sincronizarProductosConFirebase() async {
+  Future<void> sincronizarProductsConFirebase() async {
     try {
       var snapshot = await FirebaseFirestore.instance.collection('productos').get();
 
       for (var doc in snapshot.docs) {
-        var productoData = doc.data();
-        Map<String, dynamic> producto = {
-          'category': productoData['category'],
-          'description': productoData['description'],
-          'imageUrls': productoData['imageUrls'].join(','),  // Convertir lista de URLs a String
-          'name': productoData['name'],
-          'price': productoData['price'],
-          'sellerName': productoData['sellerName'],
-          'timestamp': productoData['timestamp'],
-          'userId': productoData['userId'],
+        var productData = doc.data();
+        Map<String, dynamic> product = {
+          'category': productData['category'],
+          'description': productData['description'],
+          'imageUrls': productData['imageUrls'].join(','),  // Convertir lista de URLs a String
+          'name': productData['name'],
+          'price': productData['price'],
+          'sellerName': productData['sellerName'],
+          'timestamp': productData['timestamp'],
+          'userId': productData['userId'],
         };
 
         // Verificar si el producto ya existe en la base de datos local
-        var existingProduct = await getProductoById(doc.id);
+        var existingProduct = await getProductById(doc.id);
 
         if (existingProduct == null) {
-          await insertProducto(producto);  // Insertar producto si no existe
+          await insertProduct(product);  // Insertar producto si no existe
         } else {
-          await updateProducto(producto);  // Actualizar producto si ya existe
+          await updateProduct(product);  // Actualizar producto si ya existe
         }
       }
     } catch (e) {
-      print('Error al sincronizar productos con Firebase: $e');
+      print('Error sincronizando productos con Firebase: $e');
     }
   }
 

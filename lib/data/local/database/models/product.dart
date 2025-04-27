@@ -1,4 +1,4 @@
-class Producto {
+class Product {
   final int? id;
   final String category;
   final String description;
@@ -9,7 +9,7 @@ class Producto {
   final String timestamp;
   final String userId;
 
-  Producto({
+  Product({
     this.id,
     required this.category,
     required this.description,
@@ -37,8 +37,8 @@ class Producto {
   }
 
   // Convierte un Map de la base de datos a un Producto
-  factory Producto.fromMap(Map<String, dynamic> map) {
-    return Producto(
+  factory Product.fromMap(Map<String, dynamic> map) {
+    return Product(
       id: map['id'],
       category: map['category'],
       description: map['description'],

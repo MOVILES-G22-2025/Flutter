@@ -4,35 +4,55 @@ import 'package:path/path.dart';
 class DatabaseHelper {
   static Database? _database;
 
-  // Método para obtener la instancia de la base de datos
+  /// Getter que devuelve la instancia única de la base de datos
   Future<Database> get database async {
-    if (_database != null) {
-      return _database!;
-    } else {
-      _database = await _initDatabase();
-      return _database!;
-    }
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    return _database!;
   }
 
-  // Inicializa la base de datos y crea la tabla
+  /// Inicializa (o crea) la base de datos y las tablas necesarias
   Future<Database> _initDatabase() async {
-    // Obtiene la ruta donde se almacenará la base de datos
-    String path = join(await getDatabasesPath(), 'productos.db');
-
-    // Abre la base de datos (la crea si no existe)
-    return await openDatabase(path, onCreate: (db, version) async {
-      // Sentencia SQL para crear la tabla
-      await db.execute('''
-        CREATE TABLE productos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, 
-          nombre TEXT, 
-          precio REAL
-        );
-      ''');
-    }, version: 1);
+    final path = join(await getDatabasesPath(), 'products.db');
+    return await openDatabase(path,
+      version: 2,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE products (
+            id TEXT PRIMARY KEY,
+            category TEXT,
+            description TEXT,
+            imageUrls TEXT,
+            name TEXT,
+            price REAL,
+            sellerName TEXT,
+            timestamp TEXT,
+            userId TEXT
+          );
+        ''');
+      },
+      onUpgrade: (db, oldV, newV) async {
+        if (oldV < 2) {
+          // Crea la tabla si antes existía sólo la v1
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS products (
+              id TEXT PRIMARY KEY,
+              category TEXT,
+              description TEXT,
+              imageUrls TEXT,
+              name TEXT,
+              price REAL,
+              sellerName TEXT,
+              timestamp INTEGER,
+              userId TEXT
+            );
+          ''');
+        }
+      },
+    );
   }
 
-  // Cierra la base de datos
+  /// Cierra la base de datos
   Future<void> close() async {
     final db = await database;
     db.close();
