@@ -1,12 +1,15 @@
+// lib/data/models/product.dart
 class Product {
-  final int? id;
+  final int? id;                      // ← sin cambios (usa tu clave primaria local)
   final String category;
   final String description;
-  final List<String> imageUrls;    // Lista de URLs de imágenes
+  final List<String> imageUrls;
   final String name;
   final double price;
   final String sellerName;
-  final String timestamp;
+
+  /// Milisegundos desde 1970-01-01 00:00:00 UTC
+  final int timestamp;                // ← antes era String
   final String userId;
 
   Product({
@@ -17,37 +20,37 @@ class Product {
     required this.name,
     required this.price,
     required this.sellerName,
-    required this.timestamp,
+    required this.timestamp,          // ahora es `int`
     required this.userId,
   });
 
-  // Convierte un producto a Map para insertar en la base de datos
+  // ---------- SQLite helpers ----------
+
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'category': category,
+      'id'        : id,
+      'category'  : category,
       'description': description,
-      'imageUrls': imageUrls.join(','),  // Convertir lista a String
-      'name': name,
-      'price': price,
+      'imageUrls' : imageUrls.join(','),   // lista → String
+      'name'      : name,
+      'price'     : price,
       'sellerName': sellerName,
-      'timestamp': timestamp,
-      'userId': userId,
+      'timestamp' : timestamp,             // int → int
+      'userId'    : userId,
     };
   }
 
-  // Convierte un Map de la base de datos a un Producto
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
-      id: map['id'],
-      category: map['category'],
-      description: map['description'],
-      imageUrls: (map['imageUrls'] as String).split(','),  // Convertir String a lista
-      name: map['name'],
-      price: map['price'],
-      sellerName: map['sellerName'],
-      timestamp: map['timestamp'],
-      userId: map['userId'],
+      id          : map['id'],
+      category    : map['category'],
+      description : map['description'],
+      imageUrls   : (map['imageUrls'] as String).split(','), // String → lista
+      name        : map['name'],
+      price       : map['price'],
+      sellerName  : map['sellerName'],
+      timestamp   : map['timestamp'],       // int ← int
+      userId      : map['userId'],
     );
   }
 }

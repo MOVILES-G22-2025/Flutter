@@ -26,7 +26,7 @@ class DatabaseHelper {
             name TEXT,
             price REAL,
             sellerName TEXT,
-            timestamp TEXT,
+            timestamp INTEGER,
             userId TEXT
           );
         ''');
