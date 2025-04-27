@@ -8,6 +8,7 @@ class Product {
   final double price;
   final List<String> imageUrls;
   final String sellerName;
+
   final List<String> favoritedBy;
   final DateTime? timestamp;
   final String userId;

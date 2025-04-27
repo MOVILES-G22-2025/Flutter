@@ -153,7 +153,18 @@ class ProductDetailPageContent extends StatelessWidget {
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () {
-                      // TODO: Navigate to chat
+                      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                      // Asegurarnos de tener UID y sellerId
+                      if (currentUserId != null && product.userId.isNotEmpty) {
+                        Navigator.pushNamed(
+                          context,
+                          '/chat',
+                          arguments: {
+                            'receiverId': product.userId,
+                            'receiverName': product.sellerName,
+                          },
+                        );
+                      }
                     },
                     icon: const Icon(Icons.chat_bubble_outline, size: 18),
                     label: const Text("Chat"),

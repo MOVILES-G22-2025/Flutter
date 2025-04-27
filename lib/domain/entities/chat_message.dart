@@ -1,4 +1,3 @@
-// lib/domain/entities/chat_message.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatMessage {
@@ -7,6 +6,7 @@ class ChatMessage {
   final String receiverId;
   final String text;
   final DateTime timestamp;
+  final String? imageUrl; // URL opcional de la imagen
 
   ChatMessage({
     required this.id,
@@ -14,29 +14,31 @@ class ChatMessage {
     required this.receiverId,
     required this.text,
     required this.timestamp,
+    this.imageUrl,
   });
 
   factory ChatMessage.fromMap(Map<String, dynamic> map, String documentId) {
-    // Handle missing keys/fallbacks
-    final messageText = (map['message'] as String?)
-        ?? (map['text'] as String?)
-        ?? '';
     final ts = map['timestamp'] as Timestamp?;
     return ChatMessage(
       id: documentId,
       senderId: map['senderId'] as String? ?? '',
       receiverId: map['receiverId'] as String? ?? '',
-      text: messageText,
+      text: map['message'] as String? ?? '',
       timestamp: ts?.toDate() ?? DateTime.now(),
+      imageUrl: map['imageUrl'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final data = <String, dynamic>{
       'senderId': senderId,
       'receiverId': receiverId,
       'message': text,
       'timestamp': timestamp,
     };
+    if (imageUrl != null) {
+      data['imageUrl'] = imageUrl;
+    }
+    return data;
   }
 }
