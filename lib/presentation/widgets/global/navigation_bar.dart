@@ -33,7 +33,7 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
         Navigator.pushReplacementNamed(context, '/home');
         break;
       case 1:
-        Navigator.pushReplacementNamed(context, '/chats');
+        Navigator.pushNamed(context, '/chats');
         break;
       case 2:
         Navigator.pushReplacementNamed(context, '/add_product');

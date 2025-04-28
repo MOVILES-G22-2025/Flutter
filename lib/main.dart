@@ -29,10 +29,10 @@ import 'package:senemarket/presentation/views/login/signin_page.dart';
 import 'package:senemarket/presentation/views/login/signup_page.dart';
 import 'package:senemarket/presentation/views/home_page.dart';
 import 'package:senemarket/presentation/views/products/add_product_page.dart';
-import 'package:senemarket/presentation/views/products/edit_product_page.dart';
 import 'package:senemarket/presentation/views/products/my_products_page.dart';
 import 'package:senemarket/presentation/views/profile/profile_page.dart';
 import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
+import 'package:senemarket/presentation/views/chat_page.dart';
 
 // ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
@@ -47,7 +47,6 @@ import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/core/services/connectivity_service.dart';
 import 'package:senemarket/core/services/notification_service.dart';
 
-import 'core/services/notification_service.dart';
 import 'data/datasources/product_remote_data_source.dart';
 import 'data/local/models/draft_product.dart';
 
@@ -220,6 +219,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/profile': (_) => const ProfilePage(),
           '/my_products': (_) => const MyProductsPage(),
           '/drafts': (_) => const MyDraftsPage(),
+          '/chats': (_) => const ChatsScreen(),
           '/edit_draft': (context) {
             final args = ModalRoute.of(context)!.settings.arguments;
             if (args is DraftProduct) {
