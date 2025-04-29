@@ -26,13 +26,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1) Sincronización puntual; al terminar, volcamos la tabla
-    _syncService.verificarConectividadYSincronizar().then((_) {
+    // 1) Sincronización puntual; solo productos, no usuarios
+    _syncService.sincronizarProductos().then((_) {
       _dumpLocalProducts();          // <─ imprime la tabla
     });
 
-    // 2) Escucha en tiempo real
-    _syncService.escucharCambiosEnFirebase();
+    // 2) Escucha en tiempo real solo para productos
+    _syncService.escucharCambiosEnProductos();
 
     // Animaciones -----------------------------------------------------------
     _animationController =
