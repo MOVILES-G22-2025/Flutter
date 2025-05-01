@@ -1,4 +1,4 @@
-// lib/presentation/widgets/custom_dropdown.dart
+// lib/presentation/widgets/form_fields/custom_dropdown.dart
 import 'package:flutter/material.dart';
 import 'package:senemarket/constants.dart';
 
@@ -7,6 +7,7 @@ class CustomDropdown extends StatelessWidget {
   final List<String> items;
   final String? selectedItem;
   final ValueChanged<String?> onChanged;
+  final String? Function(String?)? validator;
 
   const CustomDropdown({
     Key? key,
@@ -14,58 +15,47 @@ class CustomDropdown extends StatelessWidget {
     required this.items,
     required this.selectedItem,
     required this.onChanged,
+    this.validator,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Si selectedItem no está en items, lo tratamos como null
+    final currentValue =
+    (selectedItem != null && items.contains(selectedItem)) ? selectedItem : null;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: DropdownButtonFormField<String>(
-        dropdownColor: AppColors.primary50,
-        value: selectedItem,
+        value: currentValue,
+        items: items
+            .map((it) => DropdownMenuItem(value: it, child: Text(it)))
+            .toList(),
         onChanged: onChanged,
-        style: const TextStyle(
-          fontFamily: 'Cabin',
-          fontSize: 16,
-          color: AppColors.primary0,
-        ),
+        validator: validator,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            fontFamily: 'Cabin',
-            fontSize: 16,
-            color: AppColors.secondary30,
-          ),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
           filled: true,
           fillColor: AppColors.secondary60,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: AppColors.secondary60,
-              width: 2.0,
-            ),
+            borderSide:
+            const BorderSide(color: AppColors.secondary60, width: 2),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: AppColors.secondary60,
-              width: 2.0,
-            ),
+            borderSide:
+            const BorderSide(color: AppColors.secondary60, width: 2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: AppColors.secondary60,
-              width: 2.0,
-            ),
+            borderSide:
+            const BorderSide(color: AppColors.primary30, width: 2),
           ),
+          contentPadding:
+          const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
-        items: items.map<DropdownMenuItem<String>>((value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
       ),
     );
   }

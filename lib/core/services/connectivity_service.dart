@@ -1,18 +1,27 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ConnectivityService {
   final Connectivity _connectivity = Connectivity();
 
-  //Este stream siempre emitirá al menos un valor inicial
-  //Multi-threading strategy
-  Stream<bool> get isOnline$ async* {
-    //Emitir el estado actual primero
-    final result = await _connectivity.checkConnectivity();
-    yield result != ConnectivityResult.none;
+  /// Stream broadcast de conectividad
+  Stream<bool> get isOnline$ {
+    // Primero el estado actual, luego convertimos onConnectivityChanged a broadcast
+    final controller = StreamController<bool>.broadcast();
 
-    //Luego seguir escuchando cambios
-    yield* _connectivity.onConnectivityChanged.map(
-          (result) => result != ConnectivityResult.none,
-    ).distinct();
+    // Emitir estado inicial
+    _connectivity.checkConnectivity().then((res) {
+      controller.add(res != ConnectivityResult.none);
+    });
+
+    // Escuchar cambios
+    _connectivity.onConnectivityChanged
+        .map((res) => res != ConnectivityResult.none)
+        .listen((online) {
+      controller.add(online);
+    });
+
+    return controller.stream;
   }
 }

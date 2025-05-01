@@ -1,206 +1,261 @@
+// lib/presentation/views/drafts/edit_draft_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
+import 'package:senemarket/data/local/models/draft_product.dart';
 import 'package:senemarket/presentation/views/drafts/viewmodel/edit_draft_viewmodel.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
+import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
-
-import '../../../data/local/models/draft_product.dart';
+import '../../widgets/global/error_text.dart';
 
 class EditDraftPage extends StatefulWidget {
   final DraftProduct draft;
 
-  const EditDraftPage({super.key, required this.draft});
+  const EditDraftPage({Key? key, required this.draft}) : super(key: key);
 
   @override
-  State<EditDraftPage> createState() => _EditDraftPageState();
+  _EditDraftPageState createState() => _EditDraftPageState();
 }
 
 class _EditDraftPageState extends State<EditDraftPage> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  final _picker = ImagePicker();
+
+  late TextEditingController _nameCtrl;
+  late TextEditingController _descCtrl;
+  late TextEditingController _priceCtrl;
+  String? _category;
   final List<XFile?> _images = [];
-  String? _selectedCategory;
+
+  bool _isFormValid = false;
+  bool _submitting = false;
+  String? _nameError;
+  String? _priceError;
 
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.draft.name;
-    _descriptionController.text = widget.draft.description;
-    _priceController.text = widget.draft.price.toString();
-    _selectedCategory = widget.draft.category;
+    _nameCtrl = TextEditingController(text: widget.draft.name);
+    _descCtrl = TextEditingController(text: widget.draft.description);
+    _priceCtrl = TextEditingController(text: widget.draft.price.toString());
+    _category = constants.ProductClassification.categories.contains(widget.draft.category)
+        ? widget.draft.category
+        : null;
+    // load existing image paths if any
+    for (final path in widget.draft.imagePaths) {
+      _images.add(XFile(path));
+    }
+    _nameCtrl.addListener(_validateForm);
+    _descCtrl.addListener(_validateForm);
+    _priceCtrl.addListener(_validateForm);
+    _validateForm();
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _validateForm() {
+    final name = _nameCtrl.text.trim();
+    final desc = _descCtrl.text.trim();
+    final priceText = _priceCtrl.text.trim();
+    final price = double.tryParse(priceText);
+    setState(() {
+      _nameError = name.isEmpty
+          ? 'Required'
+          : (name.length > 40 ? constants.ErrorMessages.maxChar : null);
+      _priceError = price == null
+          ? 'Invalid'
+          : (price < 1000 ? 'Min \$1,000' : null);
+      _isFormValid = _nameError == null &&
+          desc.isNotEmpty &&
+          _category != null &&
+          _priceError == null &&
+          _images.isNotEmpty;
+    });
+  }
+
+  Future<void> _pickImage(ImageSource src) async {
     if (_images.length >= 5) {
-      _showSnackBar("Max 5 images allowed.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Máx 5 imágenes')),
+      );
       return;
     }
-    final picked = await _picker.pickImage(source: source);
-    if (picked != null) {
-      setState(() => _images.add(picked));
+    final file = await _picker.pickImage(source: src, imageQuality: 80);
+    if (file != null) {
+      setState(() {
+        _images.add(file);
+        _validateForm();
+      });
     }
-  }
-
-  void _showSnackBar(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  bool _isFormValid() {
-    final price = double.tryParse(_priceController.text);
-    return _nameController.text.isNotEmpty &&
-        _descriptionController.text.isNotEmpty &&
-        _selectedCategory != null &&
-        price != null &&
-        _images.isNotEmpty;
   }
 
   Future<void> _publishDraft() async {
+    if (!_isFormValid) return;
+    setState(() => _submitting = true);
+    // show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        backgroundColor: Colors.white,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text("Publishing draft..."),
+          ],
+        ),
+      ),
+    );
+
     final vm = context.read<EditDraftViewModel>();
-    final price = double.tryParse(_priceController.text);
-
-    if (!_isFormValid()) {
-      _showSnackBar('Please complete all fields and add at least one image.');
-      return;
-    }
-
+    final price = double.parse(_priceCtrl.text.trim());
     final product = Product(
       id: '',
-      name: _nameController.text,
-      description: _descriptionController.text,
-      price: price!,
-      category: _selectedCategory!,
+      name: _nameCtrl.text.trim(),
+      description: _descCtrl.text.trim(),
+      category: _category!,
+      price: price,
       imageUrls: [],
       sellerName: '',
       favoritedBy: [],
+      timestamp: DateTime.now(),
       userId: widget.draft.userId,
     );
 
-    final success = await vm.publishDraft(
-      product: product,
-      newImages: _images,
-    );
+    final ok = await vm.publishDraft(product: product, newImages: _images);
+    Navigator.of(context, rootNavigator: true).pop(); // close dialog
+    setState(() => _submitting = false);
 
-    if (success) {
+    if (ok) {
       await widget.draft.delete();
-      Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Draft published ✔️')),
+      );
     } else {
-      _showSnackBar("Failed to publish draft.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error publishing draft')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<EditDraftViewModel>();
-
     return Scaffold(
       backgroundColor: constants.AppColors.primary50,
       appBar: AppBar(
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
-        title: const Text('Publish Draft', style: TextStyle(fontFamily: 'Cabin', color: Colors.black, fontSize: 24)),
         centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 15,
-              runSpacing: 15,
-              children: [
-                ..._images.asMap().entries.map((entry) {
-                  final image = entry.value!;
-                  return Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(image.path),
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _images.removeAt(entry.key)),
-                          child: const CircleAvatar(
-                            radius: 20,
-                            backgroundColor: constants.AppColors.primary30,
-                            child: Icon(Icons.close, size: 20, color: Colors.white),
-                          ),
-                        ),
-                      )
-                    ],
-                  );
-                }),
-                GestureDetector(
-                  onTap: () => _pickImage(ImageSource.gallery),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: constants.AppColors.primary30,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.add, size: 40, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Name',
-              controller: _nameController,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              label: 'Description',
-              controller: _descriptionController,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            CustomDropdown(
-              label: 'Category',
-              items: constants.ProductClassification.categories,
-              selectedItem: _selectedCategory,
-              onChanged: (val) => setState(() => _selectedCategory = val),
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              label: 'Price',
-              controller: _priceController,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: vm.isLoading || !_isFormValid() ? null : _publishDraft,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: constants.AppColors.primary30,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              ),
-              child: vm.isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Add',
-                  style: TextStyle(fontFamily: 'Cabin', color: Colors.white, fontSize: 16)),
-            ),
-            const SizedBox(height: 30),
-          ],
+        title: const Text(
+          'Edit Draft',
+          style: TextStyle(
+            fontFamily: 'Cabin',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: constants.AppColors.primary0,
+          ),
         ),
       ),
       bottomNavigationBar: const NavigationBarApp(selectedIndex: 4),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // image picker
+            CustomImagePicker(
+              onPickImageFromCamera: () => _pickImage(ImageSource.camera),
+              onPickImageFromGallery: () => _pickImage(ImageSource.gallery),
+              image: _images,
+              onRemoveImage: (i) {
+                setState(() {
+                  _images.removeAt(i);
+                  _validateForm();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            // Name
+            CustomTextField(
+              label: 'Name',
+              controller: _nameCtrl,
+              onChanged: (_) => _validateForm(),
+            ),
+            if (_nameError != null) ErrorText(_nameError),
+            const SizedBox(height: 12),
+            // Description
+            CustomTextField(
+              label: 'Description',
+              controller: _descCtrl,
+              onChanged: (_) => _validateForm(),
+            ),
+            const SizedBox(height: 12),
+            // Category
+            CustomDropdown(
+              label: 'Category',
+              items: constants.ProductClassification.categories,
+              selectedItem: _category,
+              onChanged: (v) {
+                setState(() {
+                  _category = v;
+                  _validateForm();
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            // Price
+            CustomTextField(
+              label: 'Price',
+              controller: _priceCtrl,
+              isNumeric: true,
+              onChanged: (_) => _validateForm(),
+            ),
+            if (_priceError != null) ErrorText(_priceError),
+            const SizedBox(height: 24),
+            // Publish button
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isFormValid
+                    ? constants.AppColors.primary30
+                    : constants.AppColors.secondary40,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _submitting || !_isFormValid ? null : _publishDraft,
+              child: _submitting
+                  ? const SizedBox(
+                width: 20,
+                height: 20,
+                child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+                  : const Text(
+                'Publish',
+                style: TextStyle(
+                  fontFamily: 'Cabin',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

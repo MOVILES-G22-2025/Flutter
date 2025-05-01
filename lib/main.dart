@@ -47,6 +47,7 @@ import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/core/services/connectivity_service.dart';
 import 'package:senemarket/core/services/notification_service.dart';
 
+import 'core/widgets/offline_banner.dart';
 import 'data/datasources/product_remote_data_source.dart';
 import 'data/local/models/draft_product.dart';
 
@@ -165,19 +166,31 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
-        ChangeNotifierProvider(
+        ChangeNotifierProvider<AddProductViewModel>(
           create: (context) {
-            final vm = AddProductViewModel(context.read<ProductRepository>());
+            final repo = context.read<ProductRepository>();
             final connectivity = context.read<ConnectivityService>();
-            connectivity.isOnline$.listen((online) {
-              vm.setConnectivity(online); // ← esto lo usas para controlar validación dinámica
-            });
-            return vm;
+            return AddProductViewModel(
+              repo,
+              connectivityStream: connectivity.isOnline$.asBroadcastStream(),
+            );
           },
         ),
         ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
+
       child: MaterialApp(
+        builder: (ctx, child) {
+          final connectivity = ctx.read<ConnectivityService>();
+          return Column(
+            children: [
+              // 2) Nuestro banner
+              OfflineBanner(connectivityStream: connectivity.isOnline$.asBroadcastStream()),
+              // 3) El resto de la app
+              Expanded(child: child!),
+            ],
+          );
+        },
         debugShowCheckedModeBanner: false,
         initialRoute: '/splash',
         theme: ThemeData(
