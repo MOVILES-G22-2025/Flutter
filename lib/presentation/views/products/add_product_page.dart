@@ -95,16 +95,32 @@ class _AddProductPageState extends State<AddProductPage> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(seconds: 1),
+        duration: const Duration(seconds: 3),
         backgroundColor: constants.AppColors.primary30,
-        content: const Icon(
-          Icons.cloud_off,
-          color: Colors.white,
-          size: 24,
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Product saved offline. Will publish automatically when connectivity is restored',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
 
 
 
