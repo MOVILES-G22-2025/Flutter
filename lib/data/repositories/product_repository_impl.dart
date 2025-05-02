@@ -64,40 +64,41 @@ class ProductRepositoryImpl implements ProductRepository {
     required Product product,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("No user logged in");
+    if (user == null) throw Exception("User must be logged in");
 
     final online = await _connectivityService.isOnline$.first;
     if (!online) {
-      // Guardar producto completamente en DB local
+      // — SIN CONEXIÓN → guardamos todo el producto localmente con su propio ID
       final id = const Uuid().v4();
-      final imagePaths = images.where((e) => e != null).map((e) => e!.path).toList();
-      final map = {
-        'id': id,
-        'category': product.category,
-        'description': product.description,
-        'imageUrls': imagePaths.join(','),
-        'name': product.name,
-        'price': product.price,
+      final imagePaths = images.where((e) => e != null).map((e) => e!.path).join(',');
+      await _dbHelper.saveOfflineProduct({
+        'id':         id,
+        'name':       product.name,
+        'description':product.description,
+        'category':   product.category,
+        'price':      product.price,
+        'imageUrls':  imagePaths,
         'sellerName': '',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'userId': user.uid,
-        'isSynced': 0,
-      };
-      await _dbHelper.saveOfflineProduct(map);
+        'timestamp':  DateTime.now().millisecondsSinceEpoch,
+        'userId':     user.uid,
+        'isSynced':   0,
+      });
       return;
     }
 
-    // Si hay conexión, subir normalmente
-    final imageUrls = await _remoteDataSource.uploadImages(images);
-    if (imageUrls.isEmpty) throw Exception("No images uploaded");
+    // — CONEXIÓN → subida normal de imágenes + Firestore
+    final urls = await _remoteDataSource.uploadImages(images);
+    if (urls.isEmpty) throw Exception("No images uploaded");
 
-    final sellerName = await _remoteDataSource.getSellerName(user.uid) ?? '';
-    final updatedProduct = product.copyWith(
-      imageUrls: imageUrls,
-      sellerName: sellerName,
+    final seller = await _remoteDataSource.getSellerName(user.uid) ?? '';
+    final updated = product.copyWith(
+      imageUrls: urls,
+      sellerName: seller,
       userId: user.uid,
     );
-    final dto = ProductDTO.fromDomain(updatedProduct);
+    final dto = ProductDTO.fromDomain(updated);
+
+    // Usa .add(...) para nuevos productos online
     await _remoteDataSource.saveProduct(user.uid, dto);
   }
 
@@ -166,73 +167,83 @@ class ProductRepositoryImpl implements ProductRepository {
 
   /// Sincroniza todos los productos offline cuando haya conexión
   Future<void> syncOfflineProducts() async {
-    final unsynced = await _dbHelper.getUnsyncedProducts();
+    final rows = await _dbHelper.getUnsyncedProducts();
+    for (final row in rows) {
+      final id        = row['id'] as String;
+      final name      = row['name'] as String;
+      final desc      = row['description'] as String;
+      final cat       = row['category'] as String;
+      final rawPrice  = row['price'];
+      final price     = rawPrice is num ? rawPrice.toDouble() : double.parse(rawPrice.toString());
+      final rawTs     = row['timestamp'] as int;
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(rawTs);
+      final userId    = row['userId'] as String;
+      final rawImgs   = row['imageUrls'] as String;
 
-    for (final row in unsynced) {
-      // 1) Normalizar y extraer de forma segura cada campo
-      final id = row['id'] as String? ?? const Uuid().v4();
-      final name = (row['name'] as String?) ?? '';
-      final description = (row['description'] as String?) ?? '';
-      final category = (row['category'] as String?) ?? '';
-      final rawPrice = row['price'];
-      final price = (rawPrice is num)
-          ? rawPrice.toDouble()
-          : double.tryParse(rawPrice.toString()) ?? 0.0;
-      final rawTs = row['timestamp'];
-      final timestamp = (rawTs is int)
-          ? DateTime.fromMillisecondsSinceEpoch(rawTs)
-          : DateTime.now();
-      final userId = (row['userId'] as String?) ?? '';
-      final rawImages = row['imageUrls'] as String?;  // Puede ser null
-
-      // 2) Convertir la cadena en lista y filtrar solo las rutas válidas
-      final imagePaths = <String>[];
-      if (rawImages != null && rawImages.isNotEmpty) {
-        for (final p in rawImages.split(',')) {
-          if (File(p).existsSync()) {
-            imagePaths.add(p);
-          } else {
-            print('🔍 Ruta no existe, se salta: $p');
-          }
-        }
-      }
-
-      // 3) Si no hay imágenes válidas, marcamos sincronizado y seguimos
-      if (imagePaths.isEmpty) {
-        print('⚠️ No hay imágenes válidas para $id. Marcando como sincronizado.');
-        await _dbHelper.markAsSynced(id);
+      // reconstruir lista de XFile sólo con rutas válidas
+      final paths = rawImgs.split(',').where((p) => File(p).existsSync()).toList();
+      if (paths.isEmpty) {
+        // si no hay imágenes, lo borramos directamente
+        await _dbHelper.deleteOfflineProduct(id);
         continue;
       }
 
-      // 4) Generar lista de XFile
-      final images = imagePaths.map((p) => XFile(p)).toList();
-
-      // 5) Reconstruir entidad Product
+      // crear el domain object
       final product = Product(
-        id: id,
-        name: name,
-        description: description,
-        category: category,
-        price: price,
-        imageUrls: [],       // Se rellenan tras subir
-        sellerName: '',
+        id:          id,
+        name:        name,
+        description: desc,
+        category:    cat,
+        price:       price,
+        imageUrls:   [],
+        sellerName:  '',
         favoritedBy: [],
-        timestamp: timestamp,
-        userId: userId,
+        timestamp:   timestamp,
+        userId:      userId,
       );
 
       try {
-        // 6) Ahora sí subir las imágenes y el producto a Firebase
-        await addProduct(images: images, product: product);
-        // 7) Marcar como sincronizado
-        await _dbHelper.markAsSynced(id);
-        print('✅ Producto $id sincronizado correctamente.');
+        // sube usando el mismo ID local:
+        await _syncOfflineWithId(id, paths.map((p) => XFile(p)).toList(), product);
+        // una vez subido, eliminamos el registro local
+        await _dbHelper.deleteOfflineProduct(id);
       } catch (e) {
-        print('❌ Error al sincronizar offline product $id: $e');
-        // No lo marcamos como sincronizado, para reintentar más tarde
+        print('❌ Failed to sync $id: $e');
+        // lo dejamos para reintentar más tarde
       }
     }
   }
+
+  /// helper que sube el producto offline **manteniendo** su ID
+  Future<void> _syncOfflineWithId(
+      String id,
+      List<XFile?> images,
+      Product product,
+      ) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User must be logged in");
+
+    // 1) subir imágenes
+    final urls = await _remoteDataSource.uploadImages(images);
+    if (urls.isEmpty) throw Exception("No images uploaded");
+
+    // 2) reconstruir producto con URLs e ID
+    final seller = await _remoteDataSource.getSellerName(user.uid) ?? '';
+    final updated = product.copyWith(
+      id:        id,
+      imageUrls: urls,
+      sellerName: seller,
+      userId:    user.uid,
+    );
+    final dto = ProductDTO.fromDomain(updated);
+
+    // 3) escribe EXACTAMENTE en doc(id) para no duplicar:
+    await FirebaseFirestore.instance
+        .collection('products')   // o tu ruta real
+        .doc(id)
+        .set(dto.toFirestore());
+  }
+
 
   /// Cola de operaciones para favoritos
   Future<void> _syncOrQueue({required OperationType type, required Map<String, dynamic> payload, required Future<void> Function() call}) async {
