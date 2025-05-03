@@ -1,5 +1,5 @@
+// lib/core/services/connectivity_service.dart
 import 'dart:async';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ConnectivityService {
@@ -7,7 +7,6 @@ class ConnectivityService {
 
   /// Stream broadcast de conectividad
   Stream<bool> get isOnline$ {
-    // Primero el estado actual, luego convertimos onConnectivityChanged a broadcast
     final controller = StreamController<bool>.broadcast();
 
     // Emitir estado inicial
@@ -18,10 +17,14 @@ class ConnectivityService {
     // Escuchar cambios
     _connectivity.onConnectivityChanged
         .map((res) => res != ConnectivityResult.none)
-        .listen((online) {
-      controller.add(online);
-    });
+        .listen(controller.add);
 
     return controller.stream;
+  }
+
+  /// Comprueba **ahora mismo** si hay conexión
+  Future<bool> get isOnline async {
+    final res = await _connectivity.checkConnectivity();
+    return res != ConnectivityResult.none;
   }
 }
