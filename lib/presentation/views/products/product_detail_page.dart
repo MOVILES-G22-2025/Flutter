@@ -9,6 +9,7 @@ import 'package:senemarket/presentation/views/products/viewmodel/product_detail_
 import 'package:senemarket/presentation/views/products/widgets/product_image_carousel.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import '../../../domain/repositories/product_repository.dart';
+import '../cart/viewmodel/cart_viewmodel.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -229,33 +230,65 @@ class ProductDetailPageContent extends StatelessWidget {
             ),
 
             const SizedBox(height: 16),
-
-            // ── Buy now ──
+            // ── Acciones: Añadir al carrito + Comprar ──
             Row(
               children: [
+                // Botón “Add to cart”
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary30,
-                      foregroundColor: AppColors.primary0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // añadimos al carrito usando los detalles mínimos
+                      context.read<CartViewModel>().addProductByDetails(
+                        productId: product.id,
+                        name: product.name,
+                        price: product.price,
+                        imageUrl: product.imageUrls.isNotEmpty
+                            ? product.imageUrls.first
+                            : '', // o alguna imagen por defecto
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Added to cart')),
+                      );
+                    },
+                    icon: const Icon(Icons.shopping_cart_outlined),
+                    label: const Text('Add to cart'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary30),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    child: const Text(
-                      "Buy now",
-                      style: TextStyle(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle: const TextStyle(
                         fontFamily: 'Cabin',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary50,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Botón “Buy now”
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // TODO: implementar checkout
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary30,
+                      foregroundColor: AppColors.primary0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontFamily: 'Cabin',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: const Text('Buy now'),
+                  ),
+                ),
               ],
             ),
 

@@ -33,10 +33,11 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _logout() async {
+  Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
+
 
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {

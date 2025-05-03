@@ -19,6 +19,8 @@ import 'package:senemarket/domain/repositories/auth_repository.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/domain/repositories/favorites_repository.dart';
+import 'package:senemarket/presentation/views/cart/cart_page.dart';
+import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart';
 import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
 import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 
@@ -49,6 +51,7 @@ import 'package:senemarket/core/services/notification_service.dart';
 
 import 'core/widgets/offline_banner.dart';
 import 'data/datasources/product_remote_data_source.dart';
+import 'data/local/models/cart_item.dart';
 import 'data/local/models/draft_product.dart';
 
 void main() async {
@@ -63,6 +66,8 @@ void main() async {
   Hive.registerAdapter(OperationAdapter());
   Hive.registerAdapter(OperationTypeAdapter());
   Hive.registerAdapter(DraftProductAdapter()); // ⬅️ ¡IMPORTANTE!
+  Hive.registerAdapter(CartItemAdapter());
+  await Hive.openBox<CartItem>('cart');
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products'); // <-- Si usas esta box
 
@@ -166,6 +171,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
+        ChangeNotifierProvider(create: (_) => CartViewModel()),
         ChangeNotifierProvider<AddProductViewModel>(
           create: (context) {
             final repo = context.read<ProductRepository>();
@@ -233,6 +239,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/my_products': (_) => const MyProductsPage(),
           '/drafts': (_) => const MyDraftsPage(),
           '/chats': (_) => const ChatsScreen(),
+          '/cart': (_) => const CartPage(),
           '/edit_draft': (context) {
             final args = ModalRoute.of(context)!.settings.arguments;
             if (args is DraftProduct) {

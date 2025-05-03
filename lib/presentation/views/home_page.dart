@@ -25,9 +25,13 @@ class _HomePageState extends State<HomePage> {
   List<String> _selectedCategories = [];
   Map<String, int> _categoryClicks = {};
   bool _academicCalendarActive = false;
-  String? _featuredCategory;
   String? _smartRecommendedCategory;
   List<Product>? _allProducts;
+
+  // For the recommended carousel
+  final PageController _recController = PageController(viewportFraction: 0.8);
+  int _currentRecPage = 0;
+  bool _showRecommended = true;
 
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   final _productRepo = ProductRepositoryImpl();
@@ -35,82 +39,74 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // kick off an empty search so that Algolia results reset
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final searchVM = context.read<ProductSearchViewModel>();
-      searchVM.updateSearchQuery('');
+      context.read<ProductSearchViewModel>().updateSearchQuery('');
     });
-
     _loadUserClicks();
     _loadSmartRecommendationByHour();
     _listenToProducts();
   }
 
+  @override
+  void dispose() {
+    _recController.dispose();
+    super.dispose();
+  }
+
   Future<void> _listenToProducts() async {
     _productRepo.getProductsStream().listen((products) {
-      setState(() {
-        _allProducts = products;
-      });
+      setState(() => _allProducts = products);
     });
   }
 
   Future<void> _loadUserClicks() async {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    if (userDoc.exists) {
-      final data = userDoc.data();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    if (doc.exists) {
       setState(() {
-        _categoryClicks = Map<String, int>.from(data?['categoryClicks'] ?? {});
+        _categoryClicks =
+        Map<String, int>.from(doc.data()?['categoryClicks'] ?? {});
       });
     }
   }
 
   Future<void> _loadSmartRecommendationByHour() async {
-    final now = DateTime.now();
-    final currentHour = now.hour;
-    final docId = "hour_$currentHour";
-
-    final docRef = FirebaseFirestore.instance.collection("product-clics").doc(docId);
-    final snapshot = await docRef.get();
-
-    if (!snapshot.exists) return;
-
-    final data = snapshot.data();
-    final categories = Map<String, dynamic>.from(data?['categories'] ?? {});
-
-    if (categories.isEmpty) return;
-
-    final sorted = categories.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    setState(() {
-      _smartRecommendedCategory = sorted.first.key;
-    });
-  }
-
-  Future<void> _registerProductClick(Product product) async {
     final hour = DateTime.now().hour;
     final docId = 'hour_$hour';
-    final category = product.category;
+    final snap = await FirebaseFirestore.instance
+        .collection('product-clics')
+        .doc(docId)
+        .get();
+    if (!snap.exists) return;
+    final cats = Map<String, dynamic>.from(snap.data()?['categories'] ?? {});
+    if (cats.isEmpty) return;
+    final sorted = cats.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    setState(() => _smartRecommendedCategory = sorted.first.key);
+  }
 
-    final docRef = FirebaseFirestore.instance.collection('product-clics').doc(docId);
-
+  Future<void> _registerProductClick(Product p) async {
+    final hour = DateTime.now().hour;
+    final docId = 'hour_$hour';
+    final ref = FirebaseFirestore.instance.collection('product-clics').doc(docId);
     try {
-      await docRef.set({
+      await ref.set({
         'totalClicks': FieldValue.increment(1),
-        'categories': {category: FieldValue.increment(1)},
+        'categories': {p.category: FieldValue.increment(1)},
         'hour': hour,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      print('Error actualizando clics: $e');
+      debugPrint('Error updating clicks: $e');
     }
   }
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
-    setState(() {
-      _selectedIndex = index;
-    });
-    switch (index) {
+  void _onItemTapped(int idx) {
+    if (idx == _selectedIndex) return;
+    setState(() => _selectedIndex = idx);
+    switch (idx) {
       case 0:
         Navigator.pushReplacementNamed(context, '/home');
         break;
@@ -129,116 +125,117 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _incrementCategoryClick(String category) async {
-    setState(() {
-      _categoryClicks[category] = (_categoryClicks[category] ?? 0) + 1;
-    });
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
-    await userDoc.set({
-      'categoryClicks': {category: FieldValue.increment(1)}
+  void _incrementCategoryClick(String cat) async {
+    setState(() => _categoryClicks[cat] = (_categoryClicks[cat] ?? 0) + 1);
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .set({
+      'categoryClicks': {cat: FieldValue.increment(1)}
     }, SetOptions(merge: true));
   }
 
   List<String> get _categoriesSortedByClicks {
-    final allCategories = constants.ProductClassification.categories;
-    final sortedList = allCategories.toList()
-      ..sort((a, b) {
-        final clicksA = _categoryClicks[a] ?? 0;
-        final clicksB = _categoryClicks[b] ?? 0;
-        return clicksB.compareTo(clicksA);
-      });
-    return sortedList;
+    final all = constants.ProductClassification.categories;
+    final sorted = all.toList()
+      ..sort((a, b) => (_categoryClicks[b] ?? 0).compareTo(_categoryClicks[a] ?? 0));
+    return sorted;
   }
 
-  List<Product> _filterProducts(List<Product> baseProducts, ProductSearchViewModel searchViewModel) {
-    final searchQuery = searchViewModel.searchQuery;
-    final List<Product> products = searchQuery.isNotEmpty
-        ? searchViewModel.searchResults
-        : baseProducts;
-
-    final visibleProducts = products.where((p) => p.userId != userId).toList();
-
-    List<Product> filtered = _selectedCategories.isEmpty
-        ? visibleProducts
-        : visibleProducts.where((product) {
-      final productCategory = product.category.toLowerCase();
-      return _selectedCategories.any((selected) =>
-          productCategory.contains(selected.toLowerCase()));
+  List<Product> _filterProducts(
+      List<Product> base, ProductSearchViewModel vm) {
+    final query = vm.searchQuery;
+    final List<Product> source =
+    query.isNotEmpty ? vm.searchResults : base;
+    // exclude own products
+    final visible = source.where((p) => p.userId != userId).toList();
+    // category filter
+    final filtered = _selectedCategories.isEmpty
+        ? visible
+        : visible.where((p) {
+      final lc = p.category.toLowerCase();
+      return _selectedCategories.any((sel) =>
+          lc.contains(sel.toLowerCase()));
     }).toList();
-
+    // sort by date
     filtered.sort((a, b) {
-      if (a.timestamp == null && b.timestamp == null) return 0;
-      if (a.timestamp == null) return 1;
-      if (b.timestamp == null) return -1;
+      final ta = a.timestamp, tb = b.timestamp;
+      if (ta == null && tb == null) return 0;
+      if (ta == null) return 1;
+      if (tb == null) return -1;
       return _sortOrder == 'Newest first'
-          ? b.timestamp!.compareTo(a.timestamp!)
-          : a.timestamp!.compareTo(b.timestamp!);
+          ? tb.compareTo(ta)
+          : ta.compareTo(tb);
     });
-
+    // sort by price
     if (_sortPrice != null) {
-      filtered.sort((a, b) {
-        return _sortPrice == 'Price: Low to High'
-            ? a.price.compareTo(b.price)
-            : b.price.compareTo(a.price);
-      });
+      filtered.sort((a, b) => _sortPrice == 'Price: Low to High'
+          ? a.price.compareTo(b.price)
+          : b.price.compareTo(a.price));
     }
-
     return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
-    final productSearchViewModel = context.watch<ProductSearchViewModel>();
+    final searchVM = context.watch<ProductSearchViewModel>();
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 36.0),
-            searchBar.SearchBar(
-              hintText: 'Search products...',
-              onChanged: (value) {
-                productSearchViewModel.updateSearchQuery(value);
-              },
-            ),
-            const SizedBox(height: 16.0),
-            FilterBar(
-              categories: _categoriesSortedByClicks,
-              selectedCategories: _selectedCategories,
-              onCategoriesSelected: (selected) {
-                setState(() {
-                  _selectedCategories = selected;
-                });
-              },
-              onSortByDateSelected: (selectedOrder) {
-                setState(() {
-                  _sortOrder = selectedOrder;
-                });
-              },
-              onSortByPriceSelected: (selectedOrder) {
-                setState(() {
-                  _sortPrice = selectedOrder;
-                });
-              },
-              onAcademicCalendarSelected: (bool isActive) {
-                setState(() {
-                  _academicCalendarActive = isActive;
-                });
-              },
-            ),
-            const SizedBox(height: 16.0),
-            if (_smartRecommendedCategory != null &&
-                _selectedCategories.isEmpty &&
-                _allProducts != null)
-              _buildSmartRecommendationSection(),
-            if (_allProducts == null)
-              const Center(child: CircularProgressIndicator())
-            else
-              _buildMainProductGrid(productSearchViewModel),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              // ── Search + Cart row ──
+              Row(
+                children: [
+                  Expanded(
+                    child: searchBar.SearchBar(
+                      hintText: 'Search products...',
+                      onChanged: searchVM.updateSearchQuery,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart_outlined),
+                    color: constants.AppColors.secondary30,
+                    iconSize: 28,
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/cart'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // ── Filter bar ──
+              FilterBar(
+                categories: _categoriesSortedByClicks,
+                selectedCategories: _selectedCategories,
+                onCategoriesSelected: (sel) =>
+                    setState(() => _selectedCategories = sel),
+                onSortByDateSelected: (o) =>
+                    setState(() => _sortOrder = o),
+                onSortByPriceSelected: (o) =>
+                    setState(() => _sortPrice = o),
+                onAcademicCalendarSelected: (b) =>
+                    setState(() => _academicCalendarActive = b),
+              ),
+              const SizedBox(height: 16),
+              // ── Recommended carousel ──
+              if (_smartRecommendedCategory != null &&
+                  _selectedCategories.isEmpty &&
+                  _allProducts != null)
+                _buildSmartRecommendationSection(),
+              // ── Main grid ──
+              if (_allProducts == null)
+                const Center(child: CircularProgressIndicator())
+              else
+                _buildMainProductGrid(searchVM),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBarApp(
@@ -248,97 +245,121 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSmartRecommendationSection() {
-    final recommendedProducts = _allProducts!
+    final recs = _allProducts!
         .where((p) =>
-    p.category.toLowerCase() == _smartRecommendedCategory!.toLowerCase() &&
+    p.category.toLowerCase() ==
+        _smartRecommendedCategory!
+            .toLowerCase() &&
         p.userId != userId)
-        .take(4)
         .toList();
+    if (recs.isEmpty) return const SizedBox.shrink();
 
-    if (recommendedProducts.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber[100],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recommended now',
+              style: TextStyle(
+                fontFamily: 'Cabin',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                _showRecommended
+                    ? Icons.expand_less
+                    : Icons.expand_more,
+              ),
+              onPressed: () => setState(
+                      () => _showRecommended = !_showRecommended),
+            ),
+          ],
+        ),
+        if (_showRecommended) ...[
+          SizedBox(
+            height: 220,
+            child: PageView.builder(
+              controller: _recController,
+              itemCount: recs.length,
+              onPageChanged: (i) =>
+                  setState(() => _currentRecPage = i),
+              itemBuilder: (ctx, i) {
+                final p = recs[i];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 5.0),
+                  child: GestureDetector(
+                    onTap: () => _registerProductClick(p),
+                    child: ProductCard(
+                      product: p,
+                      onCategoryTap: _incrementCategoryClick,
+                      onProductTap: () =>
+                          _registerProductClick(p),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Dots indicator
           Row(
-            children: [
-              const Icon(Icons.star, color: Color(0xFFF5C508)),
-              const SizedBox(width: 8),
-              const Text(
-                'Recommended now',
-                style: TextStyle(
-                  fontFamily: 'Cabin',
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+            mainAxisAlignment:
+            MainAxisAlignment.center,
+            children: List.generate(
+              recs.length,
+                  (i) => AnimatedContainer(
+                duration:
+                const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 4),
+                width: _currentRecPage == i ? 12 : 8,
+                height: _currentRecPage == i ? 12 : 8,
+                decoration: BoxDecoration(
+                  color: _currentRecPage == i
+                      ? constants
+                      .AppColors.primary30
+                      : Colors.grey[400],
+                  shape: BoxShape.circle,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _smartRecommendedCategory!,
-            style: const TextStyle(
-              fontFamily: 'Cabin',
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
             ),
           ),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: recommendedProducts.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.75,
-            ),
-            itemBuilder: (context, index) {
-              final product = recommendedProducts[index];
-              return ProductCard(
-                product: product,
-                onCategoryTap: (category) => _incrementCategoryClick(category),
-                onProductTap: () => _registerProductClick(product),
-              );
-            },
-          ),
+          const SizedBox(height: 16),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _buildMainProductGrid(ProductSearchViewModel searchVM) {
-    final filteredProducts = _filterProducts(_allProducts!, searchVM);
-
+  Widget _buildMainProductGrid(
+      ProductSearchViewModel vm) {
+    final filtered = _filterProducts(
+        _allProducts!, vm);
     return GridView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: filteredProducts.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      physics:
+      const NeverScrollableScrollPhysics(),
+      itemCount: filtered.length,
+      gridDelegate:
+      const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         childAspectRatio: 0.75,
       ),
-      itemBuilder: (context, index) {
-        final product = filteredProducts[index];
+      itemBuilder: (ctx, idx) {
+        final p = filtered[idx];
         return ProductCard(
-          product: product,
-          onCategoryTap: (category) => _incrementCategoryClick(category),
-          onProductTap: () => _registerProductClick(product),
+          product: p,
+          onCategoryTap: _incrementCategoryClick,
+          onProductTap: () => _registerProductClick(p),
         );
       },
     );
   }
 }
-
