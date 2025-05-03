@@ -41,4 +41,9 @@ abstract class ProductRepository {
   saveOfflineProduct(Map<String, Object> productMap) {}
 
   saveDraftProduct(DraftProduct draft) {}
+
+  Future<int> getProductClickCount(String productId);
+
+  fetchProductClickCount(String productId) {}
+
 }

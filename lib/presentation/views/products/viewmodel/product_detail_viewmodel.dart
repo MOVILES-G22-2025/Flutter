@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/domain/repositories/user_repository.dart';
@@ -11,7 +10,8 @@ class ProductDetailViewModel extends ChangeNotifier {
   final FirebaseAuth _auth;
 
   bool isFavorite = false;
-  bool isLoading = false;
+  bool isClickLoading = false;
+  int clickCount = 0;
 
   ProductDetailViewModel(
       this._productRepository,
@@ -19,24 +19,40 @@ class ProductDetailViewModel extends ChangeNotifier {
         FirebaseAuth? auth,
       }) : _auth = auth ?? FirebaseAuth.instance;
 
+  /// initialize favorite‐state
   Future<void> init(Product product) async {
     final user = _auth.currentUser;
     if (user == null) return;
-
     final userData = await _userRepository.getUserData();
-    final favorites = userData?['favorites'] ?? [];
-
+    final favorites = userData?['favorites'] as List<dynamic>? ?? [];
     isFavorite = favorites.contains(product.id);
     notifyListeners();
   }
 
+  /// Called on page‐open to log a click and then fetch total clicks
+  Future<void> recordAndFetchClicks(String productId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    isClickLoading = true;
+    notifyListeners();
+
+    // 1) log click
+    await _productRepository.logProductClick(user.uid, productId);
+
+    // 2) fetch total count
+    clickCount = await _productRepository.fetchProductClickCount(productId);
+
+    isClickLoading = false;
+    notifyListeners();
+  }
+
+  /// toggle favorite + update UI
   Future<void> toggleFavorite(Product product) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    isLoading = true;
-    notifyListeners();
-
+    // you could show a spinner here if desired...
     try {
       if (isFavorite) {
         await _productRepository.removeProductFavorite(
@@ -50,11 +66,9 @@ class ProductDetailViewModel extends ChangeNotifier {
         );
       }
       isFavorite = !isFavorite;
+      notifyListeners();
     } catch (e) {
-      print('Error toggling favorite: $e');
+      debugPrint('Error toggling favorite: $e');
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 }

@@ -1,31 +1,35 @@
+// lib/data/repositories/product_repository_impl.dart
+
+import 'dart:async';
 import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:algolia/algolia.dart';
-import 'package:hive/hive.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
+import 'package:hive/hive.dart';
 
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
+import '../datasources/product_remote_data_source.dart';
+import '../local/database/database_helper.dart';
 import '../local/models/draft_product.dart';
 import '../local/models/operation.dart';
 import '../local/operation_queue.dart';
 import '../models/product_dto.dart';
-import '../datasources/product_remote_data_source.dart';
-import '../local/database/database_helper.dart';
-import 'package:uuid/uuid.dart';
 
-/// Implementación de ProductRepository con sincronización eventual
 class ProductRepositoryImpl implements ProductRepository {
   final FirebaseAuth _auth;
-  final ProductRemoteDataSource _remoteDataSource;
+  final ProductRemoteDataSource _remote;
   final Algolia _algolia;
   final FirebaseFirestore _firestore;
-  final OperationQueue _operationQueue;
-  final ConnectivityService _connectivityService;
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final OperationQueue _opQueue;
+  final ConnectivityService _connectivity;
+  final DatabaseHelper _db;
 
   ProductRepositoryImpl({
     FirebaseAuth? auth,
@@ -34,102 +38,119 @@ class ProductRepositoryImpl implements ProductRepository {
     FirebaseFirestore? firestore,
     OperationQueue? operationQueue,
     ConnectivityService? connectivityService,
+    DatabaseHelper? databaseHelper,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _remoteDataSource = remoteDataSource ?? ProductRemoteDataSource(),
+        _remote = remoteDataSource ?? ProductRemoteDataSource(),
         _algolia = algolia ??
             Algolia.init(
               applicationId: 'AAJ6U9G25X',
               apiKey: 'e1450d2b94d56f3a2bf7a7978f255be1',
             ),
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _operationQueue = operationQueue ?? OperationQueue(),
-        _connectivityService = connectivityService ?? ConnectivityService();
+        _opQueue = operationQueue ?? OperationQueue(),
+        _connectivity = connectivityService ?? ConnectivityService(),
+        _db = databaseHelper ?? DatabaseHelper();
 
-  /// Busca productos en Algolia
+  /// 1️⃣ Búsqueda de productos en Algolia
   @override
   Future<List<Product>> searchProducts(String query) async {
-    final snapshot = await _algolia.instance
+    final snap = await _algolia.instance
         .index('senemarket_products_index')
         .query(query)
         .getObjects();
-    return snapshot.hits
-        .map((hit) => ProductDTO.fromAlgoliaHit(hit).toDomain())
+    return snap.hits
+        .map((h) => ProductDTO.fromAlgoliaHit(h).toDomain())
         .toList();
   }
 
-  /// Añade producto: online → Firebase, offline → SQLite local
+  /// 2️⃣ Crear producto: online → Firestore, offline → pending_products
   @override
   Future<void> addProduct({
     required List<XFile?> images,
     required Product product,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("User must be logged in");
+    final user = _auth.currentUser!;
+    final online = await _connectivity.isOnline$.first;
+    // Usamos el id que venga o generamos uno nuevo
+    final id = product.id.isNotEmpty ? product.id : const Uuid().v4();
 
-    final online = await _connectivityService.isOnline$.first;
     if (!online) {
-      // — SIN CONEXIÓN → guardamos todo el producto localmente con su propio ID
-      final id = const Uuid().v4();
-      final imagePaths = images.where((e) => e != null).map((e) => e!.path).join(',');
-      await _dbHelper.saveOfflineProduct({
-        'id':         id,
-        'name':       product.name,
-        'description':product.description,
-        'category':   product.category,
-        'price':      product.price,
-        'imageUrls':  imagePaths,
-        'sellerName': '',
-        'timestamp':  DateTime.now().millisecondsSinceEpoch,
-        'userId':     user.uid,
-        'isSynced':   0,
+      // Guarda en pending_products para sincronizar luego
+      await _db.savePendingProduct({
+        'id': id,
+        'name': product.name,
+        'description': product.description,
+        'category': product.category,
+        'price': product.price,
+        'sellerName': product.sellerName,
+        'imageUrls': images
+            .where((e) => e != null)
+            .map((e) => e!.path)
+            .join(','),
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'userId': user.uid,
+        'isSynced': 0,
       });
       return;
     }
 
-    // — CONEXIÓN → subida normal de imágenes + Firestore
-    final urls = await _remoteDataSource.uploadImages(images);
+    // Si hay conexión, subimos imágenes y guardamos en Firestore
+    final urls = await _remote.uploadImages(images);
     if (urls.isEmpty) throw Exception("No images uploaded");
 
-    final seller = await _remoteDataSource.getSellerName(user.uid) ?? '';
+    final seller = await _remote.getSellerName(user.uid) ?? '';
     final updated = product.copyWith(
+      id: id,
       imageUrls: urls,
       sellerName: seller,
       userId: user.uid,
     );
     final dto = ProductDTO.fromDomain(updated);
-
-    // Usa .add(...) para nuevos productos online
-    await _remoteDataSource.saveProduct(user.uid, dto);
+    await _remote.saveProduct(user.uid, dto);
   }
 
-  /// Stream de productos desde Firestore
+  /// 3️⃣ Stream de productos: Firestore → cache local + dominio
   @override
   Stream<List<Product>> getProductsStream() {
-    return _remoteDataSource
-        .getProductDTOStream()
-        .map((list) => list.map((dto) => dto.toDomain()).toList());
+    return _remote.getProductDTOStream().map((dtoList) {
+      for (final dto in dtoList) {
+        // Preparamos el map para cached_products:
+        final map = dto.toFirestore()
+          ..['id'] = dto.id
+          ..['imageUrls'] = dto.imageUrls.join(',')
+          ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
+        _db.upsertCachedProduct(map);
+      }
+      return dtoList.map((dto) => dto.toDomain()).toList();
+    });
   }
 
-  /// Favoritos con cola de operaciones
+  /// 4️⃣ Favoritos (y encola si está offline)
   @override
-  Future<void> addProductFavorite({required String userId, required String productId}) async {
-    await _syncOrQueue(
-      type: OperationType.toggleFavorite,
-      payload: {'userId': userId, 'productId': productId, 'value': true},
-      call: () => _remoteDataSource.updateFavorites(productId, userId, true),
-    );
-  }
-  @override
-  Future<void> removeProductFavorite({required String userId, required String productId}) async {
-    await _syncOrQueue(
-      type: OperationType.toggleFavorite,
-      payload: {'userId': userId, 'productId': productId, 'value': false},
-      call: () => _remoteDataSource.updateFavorites(productId, userId, false),
-    );
-  }
+  Future<void> addProductFavorite({
+    required String userId,
+    required String productId,
+  }) =>
+      _syncOrQueue(
+        type: OperationType.toggleFavorite,
+        payload: {'userId': userId, 'productId': productId, 'value': true},
+        call: () => _remote.updateFavorites(productId, userId, true),
+      );
 
   @override
-  Future<void> deleteProduct(String productId) => _remoteDataSource.deleteProduct(productId);
+  Future<void> removeProductFavorite({
+    required String userId,
+    required String productId,
+  }) =>
+      _syncOrQueue(
+        type: OperationType.toggleFavorite,
+        payload: {'userId': userId, 'productId': productId, 'value': false},
+        call: () => _remote.updateFavorites(productId, userId, false),
+      );
+
+  @override
+  Future<void> deleteProduct(String productId) =>
+      _remote.deleteProduct(productId);
 
   @override
   Future<void> updateProduct({
@@ -138,183 +159,169 @@ class ProductRepositoryImpl implements ProductRepository {
     required List<XFile?> newImages,
     required List<String> imagesToDelete,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("User not logged in");
-    final newImageUrls = await _remoteDataSource.uploadImages(newImages);
-    final updatedImageUrls = List<String>.from(updatedProduct.imageUrls)
-      ..removeWhere((url) => imagesToDelete.contains(url))
-      ..addAll(newImageUrls);
-    final dto = ProductDTO.fromDomain(updatedProduct.copyWith(imageUrls: updatedImageUrls));
-    await _remoteDataSource.updateProduct(productId, dto);
+    final user = _auth.currentUser!;
+    final newUrls = await _remote.uploadImages(newImages);
+    final merged = List<String>.from(updatedProduct.imageUrls)
+      ..removeWhere(imagesToDelete.contains)
+      ..addAll(newUrls);
+    final dto = ProductDTO.fromDomain(
+      updatedProduct.copyWith(imageUrls: merged),
+    );
+    await _remote.updateProduct(productId, dto);
     for (final url in imagesToDelete) {
-      await _remoteDataSource.deleteImageByUrl(url);
+      await _remote.deleteImageByUrl(url);
     }
   }
 
-  /// Convierte un Product en Draft y lo guarda en Hive
+  /// 5️⃣ Borradores vía Hive
   @override
   Future<void> saveDraftProduct(DraftProduct draft) async {
     final box = await Hive.openBox<DraftProduct>('draft_products');
     await box.put(draft.id, draft);
-    print('✏️ Draft guardado: ${draft.id}');
   }
 
-  /// Obtiene mapas de productos no sincronizados
-  Future<List<Map<String, dynamic>>> getUnsyncedProducts() => _dbHelper.getUnsyncedProducts();
-
-  /// Marca un producto local como sincronizado
-  Future<void> markAsSynced(String id) => _dbHelper.markAsSynced(id);
-
-  /// Sincroniza todos los productos offline cuando haya conexión
+  /// 6️⃣ Sincroniza los pending_products cuando recuperas conexión
   Future<void> syncOfflineProducts() async {
-    final rows = await _dbHelper.getUnsyncedProducts();
-    for (final row in rows) {
-      final id        = row['id'] as String;
-      final name      = row['name'] as String;
-      final desc      = row['description'] as String;
-      final cat       = row['category'] as String;
-      final rawPrice  = row['price'];
-      final price     = rawPrice is num ? rawPrice.toDouble() : double.parse(rawPrice.toString());
-      final rawTs     = row['timestamp'] as int;
-      final timestamp = DateTime.fromMillisecondsSinceEpoch(rawTs);
-      final userId    = row['userId'] as String;
-      final rawImgs   = row['imageUrls'] as String;
-
-      // reconstruir lista de XFile sólo con rutas válidas
-      final paths = rawImgs.split(',').where((p) => File(p).existsSync()).toList();
+    final pending = await _db.getPendingProducts();
+    for (final row in pending) {
+      final id = row['id'] as String;
+      final name = row['name'] as String;
+      final desc = row['description'] as String;
+      final cat = row['category'] as String;
+      final rawP = row['price'];
+      final price = rawP is num
+          ? rawP.toDouble()
+          : double.tryParse(rawP.toString()) ?? 0.0;
+      final rawTs = row['timestamp'] as int;
+      final ts = DateTime.fromMillisecondsSinceEpoch(rawTs);
+      final userId = row['userId'] as String;
+      final rawImgs = row['imageUrls'] as String;
+      final paths = rawImgs
+          .split(',')
+          .where((p) => p.isNotEmpty && File(p).existsSync())
+          .toList();
       if (paths.isEmpty) {
-        // si no hay imágenes, lo borramos directamente
-        await _dbHelper.deleteOfflineProduct(id);
+        await _db.deletePendingProduct(id);
         continue;
       }
+      final images = paths.map((p) => XFile(p)).toList();
 
-      // crear el domain object
       final product = Product(
-        id:          id,
-        name:        name,
+        id: id,
+        name: name,
         description: desc,
-        category:    cat,
-        price:       price,
-        imageUrls:   [],
-        sellerName:  '',
+        category: cat,
+        price: price,
+        imageUrls: [],
+        sellerName: '',
         favoritedBy: [],
-        timestamp:   timestamp,
-        userId:      userId,
+        timestamp: ts,
+        userId: userId,
       );
 
       try {
-        // sube usando el mismo ID local:
-        await _syncOfflineWithId(id, paths.map((p) => XFile(p)).toList(), product);
-        // una vez subido, eliminamos el registro local
-        await _dbHelper.deleteOfflineProduct(id);
+        await _syncOfflineWithId(id, images, product);
+        await _db.deletePendingProduct(id);
       } catch (e) {
-        print('❌ Failed to sync $id: $e');
-        // lo dejamos para reintentar más tarde
+        debugPrint('❌ Failed syncing pending $id: $e');
       }
     }
   }
 
-  /// helper que sube el producto offline **manteniendo** su ID
+  /// Helper para subir offline manteniendo ID
   Future<void> _syncOfflineWithId(
-      String id,
-      List<XFile?> images,
-      Product product,
-      ) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("User must be logged in");
-
-    // 1) subir imágenes
-    final urls = await _remoteDataSource.uploadImages(images);
+      String id, List<XFile> images, Product product) async {
+    final user = _auth.currentUser!;
+    final urls = await _remote.uploadImages(images);
     if (urls.isEmpty) throw Exception("No images uploaded");
-
-    // 2) reconstruir producto con URLs e ID
-    final seller = await _remoteDataSource.getSellerName(user.uid) ?? '';
+    final seller = await _remote.getSellerName(user.uid) ?? '';
     final updated = product.copyWith(
-      id:        id,
       imageUrls: urls,
       sellerName: seller,
-      userId:    user.uid,
+      userId: user.uid,
     );
     final dto = ProductDTO.fromDomain(updated);
-
-    // 3) escribe EXACTAMENTE en doc(id) para no duplicar:
-    await FirebaseFirestore.instance
-        .collection('products')   // o tu ruta real
-        .doc(id)
-        .set(dto.toFirestore());
+    await _firestore.collection('products').doc(id).set(dto.toFirestore());
   }
 
-
-  /// Cola de operaciones para favoritos
-  Future<void> _syncOrQueue({required OperationType type, required Map<String, dynamic> payload, required Future<void> Function() call}) async {
-    final online = await _connectivityService.isOnline$.first;
+  /// Cola o directo para favoritos
+  Future<void> _syncOrQueue({
+    required OperationType type,
+    required Map<String, dynamic> payload,
+    required Future<void> Function() call,
+  }) async {
+    final online = await _connectivity.isOnline$.first;
     if (online) {
       await call();
     } else {
-      final op = Operation(id: const Uuid().v4(), type: type, payload: payload);
-      await _operationQueue.enqueue(op);
+      await _opQueue.enqueue(Operation(
+        id: const Uuid().v4(),
+        type: type,
+        payload: payload,
+      ));
     }
   }
 
-  /// Procesa cola de favoritos y drafts al recuperar conexión
-  void startQueueProcessor(NotificationService notificationService) {
-    _connectivityService.isOnline$.listen((online) async {
+  /// Arranca el procesador de colas + notifica borradores pendientes
+  void startQueueProcessor(NotificationService notifier) {
+    _connectivity.isOnline$.listen((online) async {
       if (!online) return;
-      // Notificar drafts pendientes
+      // avisar si hay borradores
       final box = await Hive.openBox<DraftProduct>('draft_products');
-      if (box.isNotEmpty) {
-        await notificationService.showReminderNotification();
-      }
-      // Procesar favoritos en cola
-      final ops = _operationQueue.pending();
-      for (final op in ops) {
+      if (box.isNotEmpty) await notifier.showReminderNotification();
+      // vaciar cola de favoritos
+      for (final op in _opQueue.pending()) {
         if (op.type == OperationType.toggleFavorite) {
           try {
-            await _remoteDataSource.toggleFavoriteFromPayload(op.payload);
-            await _operationQueue.remove(op.id);
+            await _remote.toggleFavoriteFromPayload(op.payload);
+            await _opQueue.remove(op.id);
           } catch (_) {}
         }
       }
-      // Sincronizar productos offline
+      // sincronizar creaciones offline
       await syncOfflineProducts();
     });
   }
 
-  /// Registra en Firestore un “click” sobre un producto (por analytics)
+  /// Analytics: clics de producto
   @override
   Future<void> logProductClick(String userId, String productId) async {
-    try {
-      await _firestore.collection('product-clics').add({
-        'userId': userId,
-        'productId': productId,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('Error logging product click: $e');
-      rethrow;
-    }
+    await _firestore.collection('product-clicks').add({
+      'userId': userId,
+      'productId': productId,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 
-  /// Guarda un producto completo en la base local (SQLite) para sincronizar luego
   @override
-  Future<void> saveOfflineProduct(Map<String, Object> productMap) async {
-    try {
-      await _dbHelper.saveOfflineProduct(productMap);
-    } catch (e) {
-      print('Error saving product offline: $e');
-      rethrow;
-    }
+  Future<int> getProductClickCount(String productId) async {
+    // Consulta todos los docs donde productId == dado
+    final snap = await _firestore
+        .collection('product-clicks')
+        .where('productId', isEqualTo: productId)
+        .get();
+    return snap.docs.length;
   }
 
+  @override
+  Future<int> fetchProductClickCount(String productId) async {
+    final snap = await _firestore
+        .collection('product-clicks')
+        .where('productId', isEqualTo: productId)
+        .get();
+    return snap.docs.length;
+  }
+
+  @override
+  Future<void> saveOfflineProduct(Map<String, Object> productMap) =>
+      _db.savePendingProduct(productMap);
 
   @override
   String get currentUserId {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw Exception('No hay usuario autenticado');
-      // —o— return '';
-    }
+    if (uid == null) throw Exception('No authenticated user');
     return uid;
   }
+
 
 }
