@@ -299,7 +299,7 @@ class _HomePageState extends State<HomePage> {
                       product: p,
                       onCategoryTap: _incrementCategoryClick,
                       onProductTap: () =>
-                          _registerProductClick(p),
+                          _registerProductClick(p), originIndex: 0,
                     ),
                   ),
                 );
@@ -358,6 +358,7 @@ class _HomePageState extends State<HomePage> {
           product: p,
           onCategoryTap: _incrementCategoryClick,
           onProductTap: () => _registerProductClick(p),
+          originIndex: 0,
         );
       },
     );

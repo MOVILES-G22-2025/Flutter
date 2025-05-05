@@ -2,9 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart';
 import '../../../../data/local/models/cart_item.dart';
+import '../../../../domain/entities/product.dart';
+import '../../../../core/services/custom_cache_manager.dart';
+import '../products/product_detail_page.dart';
 
 class CartPage extends StatelessWidget {
   const CartPage({Key? key}) : super(key: key);
@@ -41,28 +46,32 @@ class CartPage extends StatelessWidget {
               itemBuilder: (_, i) => _CartRow(item: cart.items[i]),
             ),
           ),
-          _CartSummary(),
+          const _CartSummary(),
         ],
       ),
     );
   }
 }
 
+/// Miniatura cacheada (offline-first).
 Widget _buildThumbnail(String url) {
-  return Image.network(
-    url,
+  return CachedNetworkImage(
+    imageUrl: url,
+    cacheManager: CustomCacheManager.instance,
     width: 64,
     height: 64,
     fit: BoxFit.cover,
-    // si falla la carga (offline), cae aquí:
-    errorBuilder: (context, error, stack) => Container(
+    placeholder: (_, __) => Container(
       width: 64,
       height: 64,
       color: Colors.grey[200],
-      child: const Icon(
-        Icons.broken_image,
-        color: Colors.grey,
-      ),
+      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+    ),
+    errorWidget: (_, __, ___) => Container(
+      width: 64,
+      height: 64,
+      color: Colors.grey[200],
+      child: const Icon(Icons.broken_image, color: Colors.grey),
     ),
   );
 }
@@ -74,69 +83,97 @@ class _CartRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.read<CartViewModel>();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          _buildThumbnail(item.imageUrl),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name,
-                    style: const TextStyle(
-                        fontFamily: 'Cabin', fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text('\$${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.black54)),
-              ],
+
+    // Construimos un Product mínimo para pasar al detalle
+    final product = Product(
+      id: item.productId,
+      name: item.name,
+      description: '',
+      category: '',
+      price: item.price,
+      imageUrls: [item.imageUrl],
+      sellerName: '',
+      favoritedBy: [], userId: '',
+    );
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        // Navega al detalle
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailPage(product: product, originIndex: 0,),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            _buildThumbnail(item.imageUrl),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.name,
+                      style: const TextStyle(
+                          fontFamily: 'Cabin', fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('\$${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.black54)),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline),
-            onPressed: () => vm.removeOne(item.productId),
-          ),
-          Text('${item.quantity}', style: const TextStyle(fontSize: 16)),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => vm.addProductByDetails(
-              productId: item.productId,
-              name:     item.name,
-              price:    item.price,
-              imageUrl: item.imageUrl,
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: () => vm.removeOne(item.productId),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Remove item'),
-                  content: const Text('Remove this item from your cart?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Remove', style: TextStyle(color: Colors.red))),
-                  ],
-                ),
-              );
-              if (confirm == true) {
-                await vm.removeItem(item.productId);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Item removed')),
+            Text('${item.quantity}', style: const TextStyle(fontSize: 16)),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () => vm.addProductByDetails(
+                productId: item.productId,
+                name: item.name,
+                price: item.price,
+                imageUrl: item.imageUrl,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Remove item'),
+                    content: const Text('Remove this item from your cart?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Remove', style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
                 );
-              }
-            },
-          ),
-        ],
+                if (confirm == true) {
+                  await vm.removeItem(item.productId);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Item removed')),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _CartSummary extends StatelessWidget {
+  const _CartSummary();
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CartViewModel>();

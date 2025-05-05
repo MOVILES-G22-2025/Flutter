@@ -13,8 +13,13 @@ import '../cart/viewmodel/cart_viewmodel.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
+  final int originIndex;
 
-  const ProductDetailPage({Key? key, required this.product}) : super(key: key);
+  const ProductDetailPage({
+    Key? key,
+    required this.product,
+    required this.originIndex,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -30,15 +35,23 @@ class ProductDetailPage extends StatelessWidget {
         vm.recordAndFetchClicks(product.id);
         return vm;
       },
-      child: ProductDetailPageContent(product: product),
+      child: ProductDetailPageContent(
+          product: product,
+          originIndex: originIndex,
+      ),
     );
   }
 }
 
 class ProductDetailPageContent extends StatelessWidget {
   final Product product;
+  final int originIndex;
 
-  const ProductDetailPageContent({Key? key, required this.product})
+  const ProductDetailPageContent({
+    Key? key,
+    required this.product,
+    required this.originIndex,
+  })
       : super(key: key);
 
   @override
@@ -296,7 +309,7 @@ class ProductDetailPageContent extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const NavigationBarApp(selectedIndex: 0),
+      bottomNavigationBar: NavigationBarApp(selectedIndex: originIndex),
     );
   }
 }
