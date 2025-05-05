@@ -148,25 +148,18 @@ class DatabaseHelper {
   /// Inserts or updates a Firestore-backed product locally.
   Future<void> upsertCachedProduct(Map<String, dynamic> product) async {
     final db = await database;
-
-    // Ensure timestamp is an integer.
     if (product['timestamp'] is DateTime) {
       product['timestamp'] =
           (product['timestamp'] as DateTime).millisecondsSinceEpoch;
     }
-
-    // Flatten imageUrls list into comma-separated string.
     if (product['imageUrls'] is List) {
       product['imageUrls'] =
           (product['imageUrls'] as List).cast<String>().join(',');
     }
-
-    // JSON-encode the favoritedBy list.
     if (product['favoritedBy'] is List) {
       product['favoritedBy'] =
           jsonEncode((product['favoritedBy'] as List).cast<String>());
     }
-
     await db.insert(
       'cached_products',
       product,
@@ -175,21 +168,27 @@ class DatabaseHelper {
   }
 
   /// Fetches all cached products, ordered by newest first.
+
   Future<List<Map<String, dynamic>>> getCachedProducts() async {
     final db = await database;
-    return await db.query(
-      'cached_products',
-      orderBy: 'timestamp DESC',
-    );
+    return await db.query('cached_products', orderBy: 'timestamp DESC');
   }
 
-  /// Deletes a cached product (e.g. if removed on Firestore).
   Future<void> deleteCachedProduct(String id) async {
     final db = await database;
-    await db.delete(
+    await db.delete('cached_products', where: 'id = ?', whereArgs: [id]);
+  }
+
+
+
+  Future<List<Map<String, dynamic>>> getCachedFavorites(String userId) async {
+    final db = await database;
+    // Buscamos en favoritedBy JSON
+    return await db.query(
       'cached_products',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'favoritedBy LIKE ?',
+      whereArgs: ['%"$userId"%'],
+      orderBy: 'timestamp DESC',
     );
   }
 }

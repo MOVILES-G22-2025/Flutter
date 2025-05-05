@@ -171,6 +171,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (context) => SignInViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => SignUpViewModel(context.read<AuthRepository>())),
         ChangeNotifierProvider(create: (context) => ProductSearchViewModel(context.read<ProductRepository>())),
+        ChangeNotifierProvider(create: (context) => FavoritesViewModel(context.read<FavoritesRepository>())),
         ChangeNotifierProvider(create: (_) => CartViewModel()),
         ChangeNotifierProvider<AddProductViewModel>(
           create: (context) {
@@ -182,7 +183,6 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
             );
           },
         ),
-        ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
       ],
 
       child: MaterialApp(

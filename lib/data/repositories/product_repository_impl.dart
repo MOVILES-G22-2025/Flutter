@@ -1,6 +1,7 @@
 // lib/data/repositories/product_repository_impl.dart
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:algolia/algolia.dart';
@@ -130,23 +131,71 @@ class ProductRepositoryImpl implements ProductRepository {
   Future<void> addProductFavorite({
     required String userId,
     required String productId,
-  }) =>
-      _syncOrQueue(
+  }) async {
+    // 1) Actualiza cache local
+    await _updateLocalFavoritedBy(productId, userId, add: true);
+
+    // 2) Si estoy online, disparo en Firestore; si no, encolo
+    final online = await _connectivity.isOnline$.first;
+    if (online) {
+      await _remote.updateFavorites(productId, userId, true);
+    } else {
+      await _opQueue.enqueue(Operation(
+        id: const Uuid().v4(),
         type: OperationType.toggleFavorite,
         payload: {'userId': userId, 'productId': productId, 'value': true},
-        call: () => _remote.updateFavorites(productId, userId, true),
-      );
+      ));
+    }
+  }
 
   @override
   Future<void> removeProductFavorite({
     required String userId,
     required String productId,
-  }) =>
-      _syncOrQueue(
+  }) async {
+    // 1) Actualiza cache local
+    await _updateLocalFavoritedBy(productId, userId, add: false);
+
+    // 2) Si estoy online, disparo en Firestore; si no, encolo
+    final online = await _connectivity.isOnline$.first;
+    if (online) {
+      await _remote.updateFavorites(productId, userId, false);
+    } else {
+      await _opQueue.enqueue(Operation(
+        id: const Uuid().v4(),
         type: OperationType.toggleFavorite,
         payload: {'userId': userId, 'productId': productId, 'value': false},
-        call: () => _remote.updateFavorites(productId, userId, false),
-      );
+      ));
+    }
+  }
+
+  Future<void> _updateLocalFavoritedBy(
+      String productId, String userId,
+      { required bool add }) async {
+    final db = await _db.database;  // :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+    final rows = await db.query(
+      'cached_products',
+      columns: ['favoritedBy'],
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+    if (rows.isEmpty) return;
+
+    final currentJson = rows.first['favoritedBy'] as String;
+    final list = List<String>.from(jsonDecode(currentJson) as List);
+    if (add) {
+      if (!list.contains(userId)) list.add(userId);
+    } else {
+      list.remove(userId);
+    }
+
+    await db.update(
+      'cached_products',
+      {'favoritedBy': jsonEncode(list)},
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
 
   @override
   Future<void> deleteProduct(String productId) =>
