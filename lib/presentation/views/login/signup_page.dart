@@ -6,6 +6,7 @@ import 'package:senemarket/presentation/widgets/form_fields/password/confirm_pas
 import '../../../constants.dart' as constants;
 import '../../widgets/form_fields/custom_field.dart';
 import '../../widgets/form_fields/password/password_field.dart';
+import '../../widgets/form_fields/searchable_dropdown.dart';
 import '../../widgets/global/error_text.dart';
 import 'viewmodel/sign_up_viewmodel.dart';
 
@@ -106,34 +107,17 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Career
                 const SizedBox(height: 12),
 
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return const Iterable<String>.empty();
-                    }
-                    return constants.Careers.careers.where((String option) {
-                      return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
-                    });
-                  },
-                  onSelected: (String selection) {
+                SearchableDropdown(
+                  label: 'Main Career',
+                  items: constants.Careers.careers,
+                  selectedItem: _selectedCareer,
+                  onChanged: (String? career) {
                     setState(() {
-                      _selectedCareer = selection;
+                      _selectedCareer = career;
                     });
-                  },
-                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                    controller.text = _selectedCareer ?? '';
-                    return CustomTextField(
-                      label: 'Main Career',
-                      controller: controller,
-                      focusNode: focusNode,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCareer = value;
-                        });
-                      },
-                    );
                   },
                 ),
+
                 const SizedBox(height: 8),
 
                 //Semester

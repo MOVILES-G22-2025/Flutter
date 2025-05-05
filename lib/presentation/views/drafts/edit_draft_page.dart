@@ -9,7 +9,7 @@ import 'package:senemarket/data/local/models/draft_product.dart';
 import 'package:senemarket/presentation/views/drafts/viewmodel/edit_draft_viewmodel.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/form_fields/searchable_dropdown.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import '../../widgets/global/error_text.dart';
 
@@ -206,7 +206,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
             ),
             const SizedBox(height: 12),
             // Category
-            CustomDropdown(
+            SearchableDropdown(
               label: 'Category',
               items: constants.ProductClassification.categories,
               selectedItem: _category,

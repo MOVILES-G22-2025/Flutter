@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:senemarket/presentation/widgets/form_fields/custom_image_picker.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/form_fields/searchable_dropdown.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/constants.dart' as constants;
 
@@ -256,7 +256,17 @@ class _AddProductPageState extends State<AddProductPage> {
                   const SizedBox(height: 12),
                   CustomTextField(label: 'Description', controller: _descriptionController, onChanged: (_) => _validateForm()),
                   const SizedBox(height: 12),
-                  CustomDropdown(label: 'Category', items: constants.ProductClassification.categories, selectedItem: _selectedCategory, onChanged: (v) => setState((){ _selectedCategory=v; _validateForm(); })),
+                  SearchableDropdown(
+                    label: 'Category',
+                    items: constants.ProductClassification.categories,
+                    selectedItem: _selectedCategory,
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCategory = v;
+                        _validateForm();
+                      });
+                    },
+                  ),
                   const SizedBox(height: 12),
                   CustomTextField(controller: _priceController, label: 'Price', isNumeric: true, onChanged: (_) => _validateForm()),
                   ErrorText(_priceError),
