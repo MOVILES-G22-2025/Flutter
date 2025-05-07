@@ -1,4 +1,3 @@
-// lib/presentation/views/chat/chat_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

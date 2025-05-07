@@ -32,16 +32,19 @@ class _ChatListPageState extends State<ChatListPage> {
       backgroundColor: AppColors.primary50,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Chats',
-          style: TextStyle(
-            fontFamily: 'Cabin',
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
         backgroundColor: AppColors.primary50,
         elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.primary0),
+        centerTitle: true,
+        title: const Text(
+            'Chats',
+          style: TextStyle(
+            fontFamily: 'Cabin',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary0,
+          ),
+        ),
       ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -22,7 +22,6 @@ class _SignUpPageState extends State<SignUpPage> {
   // Controllers for text inputs
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _careerController = TextEditingController();
   final TextEditingController _semesterController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -241,7 +240,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final career = _careerController.text.trim();
+    final career = _selectedCareer?.trim() ?? '';
     final semester = _semesterController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
@@ -267,7 +266,7 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    if (name.length > 40 || career.length > 40) {
+    if (name.length > 40) {
       setState(() => _localErrorMessage = ErrorMessages.maxChar);
       return;
     }
