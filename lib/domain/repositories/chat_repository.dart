@@ -12,4 +12,3 @@ abstract class ChatRepository {
   /// Marca un mensaje como leído en el backend.
   Future<void> markAsRead(String messageId);
 }
-
