@@ -87,7 +87,8 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                       hintText: 'Search ${widget.label}',
                       filled: true,
                       fillColor: AppColors.secondary60,
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search,
+                      color: AppColors.primary30),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: AppColors.secondary60),
