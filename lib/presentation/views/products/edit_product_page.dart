@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/edit_product_viewmodel.dart';
-import 'package:senemarket/presentation/widgets/form_fields/custom_dropdown.dart';
+import 'package:senemarket/presentation/widgets/form_fields/searchable_dropdown.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import '../../../core/services/custom_cache_manager.dart';
@@ -291,12 +291,14 @@ class _EditProductPageState extends State<EditProductPage> {
               onChanged: (_) {},
             ),
             const SizedBox(height: 12),
-            CustomDropdown(
+            SearchableDropdown(
               label: 'Category',
               items: constants.ProductClassification.categories,
               selectedItem: _selectedCategory,
-              onChanged: (val) {
-                setState(() => _selectedCategory = val);
+              onChanged: (v) {
+                setState(() {
+                  _selectedCategory = v;
+                });
               },
             ),
             CustomTextField(controller: _priceController, label: 'Price', isNumeric: true,

@@ -1,74 +1,70 @@
+// lib/presentation/views/products/widgets/product_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:senemarket/constants.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/presentation/views/products/product_detail_page.dart';
-
 import '../../../../core/services/custom_cache_manager.dart';
 
-/// UI card to display a single [Product].
-/// Calls [onCategoryTap] when the category is tapped (optional) and [onProductTap] when the card is tapped.
 class ProductCard extends StatelessWidget {
   final Product product;
   final ValueChanged<String>? onCategoryTap;
-  final VoidCallback? onProductTap; // Callback opcional para el clic en el producto
+  final VoidCallback? onProductTap;
+  final int originIndex;
 
   const ProductCard({
     Key? key,
     required this.product,
     this.onCategoryTap,
     this.onProductTap,
+    required this.originIndex,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Get product details
     final category = product.category;
-    final productName = product.name.isNotEmpty ? product.name : "Sin nombre";
-    final productPrice = product.price;
     final imageUrl = product.imageUrls.isNotEmpty ? product.imageUrls.first : null;
 
     return GestureDetector(
       onTap: () {
-        // Llama al callback del clic en el producto si está definido
-        if (onProductTap != null) {
-          onProductTap!();
-        }
-        // Llama al callback de categoría si se desea
-        if (onCategoryTap != null && category.isNotEmpty) {
-          onCategoryTap!(category);
-        }
-        // Navega a la página de detalle del producto
+        // Lógica de callback antes de navegar
+        if (onProductTap != null) onProductTap!();
+        if (onCategoryTap != null) onCategoryTap!(category);
+
+        // Navegación al detalle, pasando originIndex
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(product: product),
+            builder: (_) => ProductDetailPage(
+              product: product,
+              originIndex: originIndex,
+            ),
           ),
         );
       },
       child: Card(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image
+            // Imagen
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: (imageUrl != null)
-                    ? CachedNetworkImage( //Caching strategy
+                child: imageUrl != null
+                    ? CachedNetworkImage(
                   imageUrl: imageUrl,
                   cacheManager: CustomCacheManager.instance,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
+                  placeholder: (ctx, url) => Container(
                     color: Colors.grey[300],
                     child: const Center(child: CircularProgressIndicator()),
                   ),
-                  errorWidget: (context, url, error) => Container(
+                  errorWidget: (ctx, url, err) => Container(
                     color: Colors.grey[300],
                     child: const Icon(Icons.error, size: 50, color: Colors.red),
                   ),
@@ -80,21 +76,23 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Product name
+
+            // Nombre
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                productName,
+                product.name.isNotEmpty ? product.name : 'Sin nombre',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Product price
+
+            // Precio
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
-                "\$ ${productPrice.toStringAsFixed(2)}",
+                '\$ ${product.price.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -102,10 +100,11 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
 }
-
