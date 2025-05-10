@@ -1,6 +1,10 @@
 // lib/presentation/views/chat/viewmodel/chat_list_viewmodel.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../../../domain/entities/chat_message.dart';
 
 /// ViewModel for fetching the list of chat contacts (users with at least one message),
 /// ordered by most recent message first.
@@ -10,82 +14,88 @@ class ChatListViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> users = [];
   bool isLoading = false;
 
-  /// Fetches users with whom the current user has exchanged at least one message,
-  /// including the timestamp of the last message, and sorts them descending.
-  Future<void> fetchUsers(String currentUserId) async {
-    try {
-      isLoading = true;
-      notifyListeners();
+  StreamSubscription? _chatSubscription;
 
-      //Obtener todos los mensajes donde el usuario es sender o receiver
-      final chatSnap = await _firestore
-          .collection('chats')
-          .where('senderId', whereIn: [currentUserId])
-          .get();
-      final chatSnap2 = await _firestore
-          .collection('chats')
-          .where('receiverId', whereIn: [currentUserId])
-          .get();
+  void listenToChats(String currentUserId) {
+    _chatSubscription?.cancel(); // cancelar si ya existe
 
-      //Mapear contactos y su último timestamp
-      final Map<String, Map<String, dynamic>> lastMessages = {};
+    _chatSubscription = FirebaseFirestore.instance
+        .collection('chats')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      final docs = snapshot.docs;
+      // filtra y actualiza users con lógica actual
+      _processMessages(docs, currentUserId);
+    });
+  }
 
-      for (var doc in [...chatSnap.docs, ...chatSnap2.docs]) {
-        final data = doc.data();
-        final sender = data['senderId'] as String?;
-        final receiver = data['receiverId'] as String?;
-        final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-        final message = data['message'] as String? ?? '';
-        String? other;
-        if (sender == currentUserId && receiver != null) other = receiver;
-        if (receiver == currentUserId && sender != null) other = sender;
+  void _processMessages(List<QueryDocumentSnapshot> docs, String currentUserId) async {
+    final Map<String, Map<String, dynamic>> lastMessages = {};
 
-        if (other != null && other != currentUserId) {
-          final prev = lastMessages[other];
-          if (prev == null || ts.isAfter(prev['timestamp'] as DateTime)) {
-            lastMessages[other] = {
-              'timestamp': ts,
-              'message': message,
-              'senderId': sender,
-              'seen': data['seen'] ?? false,
-            };
-          }
-        }
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final sender = data['senderId'] as String?;
+      final receiver = data['receiverId'] as String?;
+      final ts = (data['timestamp'] as Timestamp?)?.toDate();
+      final message = data['message'] as String? ?? '';
+      final statusString = data['status'] as String? ?? 'sent';
+      final status = MessageStatus.values.firstWhere(
+            (e) => e.toString().split('.').last == statusString,
+        orElse: () => MessageStatus.sent,
+      );
+
+      if (sender == null || receiver == null || ts == null) continue;
+
+      String? otherUserId;
+      if (sender == currentUserId) {
+        otherUserId = receiver;
+      } else if (receiver == currentUserId) {
+        otherUserId = sender;
       }
 
-      //Obtener datos de usuario y construir lista
-      final List<Map<String, dynamic>> list = [];
-      for (var entry in lastMessages.entries) {
-        final id = entry.key;
-        final last = entry.value;
-        final userDoc = await _firestore.collection('users').doc(id).get();
+      if (otherUserId == null || otherUserId == currentUserId) continue;
 
-        if (userDoc.exists) {
-          final data = userDoc.data()!;
-          list.add({
-            'userId': id,
-            'name': data['name'] as String? ?? 'Unnamed',
-            'lastTimestamp': last['timestamp'],
-            'lastMessage': last['message'],
-            'lastSenderId': last['senderId'],
-            'seen': last['seen'],
-          });
-        }
+      final existing = lastMessages[otherUserId];
+      if (existing == null || ts.isAfter(existing['timestamp'])) {
+        lastMessages[otherUserId] = {
+          'timestamp': ts,
+          'message': message,
+          'senderId': sender,
+          'status': status,
+        };
       }
-
-      //Ordenar por lastTimestamp descendente
-      list.sort((a, b) {
-        final ta = a['lastTimestamp'] as DateTime;
-        final tb = b['lastTimestamp'] as DateTime;
-        return tb.compareTo(ta);
-      });
-
-      users = list;
-    } catch (e) {
-      print('Error fetching chat contacts: \$e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
     }
+
+    final List<Map<String, dynamic>> updatedUsers = [];
+
+    for (var entry in lastMessages.entries) {
+      final userId = entry.key;
+      final last = entry.value;
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) continue;
+
+      final userData = userDoc.data()!;
+      updatedUsers.add({
+        'userId': userId,
+        'name': userData['name'] ?? 'Sin nombre',
+        'lastTimestamp': last['timestamp'],
+        'lastMessage': last['message'],
+        'lastSenderId': last['senderId'],
+        'status': last['status'],
+      });
+    }
+
+    updatedUsers.sort((a, b) =>
+        (b['lastTimestamp'] as DateTime).compareTo(a['lastTimestamp'] as DateTime));
+
+    users = updatedUsers;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _chatSubscription?.cancel();
+    super.dispose();
   }
 }

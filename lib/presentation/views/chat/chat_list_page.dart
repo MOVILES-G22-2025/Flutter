@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:senemarket/constants.dart';
+import '../../../domain/entities/chat_message.dart';
 import 'viewmodel/chat_list_viewmodel.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 
@@ -20,7 +21,7 @@ class _ChatListPageState extends State<ChatListPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<ChatListViewModel>();
       final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-      vm.fetchUsers(currentUserId);
+      vm.listenToChats(currentUserId);
     });
   }
 
@@ -53,14 +54,18 @@ class _ChatListPageState extends State<ChatListPage> {
           : ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: vm.users.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, __) => const Divider(
+          height: 1,
+          thickness: 0.7,
+          color: Colors.grey,
+        ),
         itemBuilder: (ctx, i) {
           final chat = vm.users[i];
           final name = chat['name'] as String;
           final lastMessageRaw = chat['lastMessage'] as String? ?? '';
           final isMine = chat['lastSenderId'] ==
               FirebaseAuth.instance.currentUser?.uid;
-          final seen = chat['seen'] as bool? ?? false;
+          final status = chat['status'] as MessageStatus? ?? MessageStatus.sent;
           final DateTime? ts = chat['lastTimestamp'] as DateTime?;
           final timeLabel =
           ts != null ? DateFormat('hh:mm a').format(ts) : '';
@@ -70,9 +75,9 @@ class _ChatListPageState extends State<ChatListPage> {
             lastMessageWidget = Row(
               children: [
                 Icon(
-                  seen ? Icons.done_all : Icons.check,
+                  status == MessageStatus.read ? Icons.done_all : Icons.check,
                   size: 16,
-                  color: seen ? Colors.blue : Colors.grey,
+                  color: status == MessageStatus.read ? Colors.grey : Colors.grey,
                 ),
                 const SizedBox(width: 4),
                 Expanded(

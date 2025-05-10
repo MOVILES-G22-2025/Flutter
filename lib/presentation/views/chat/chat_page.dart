@@ -1,10 +1,12 @@
 // lib/presentation/views/chat/chat_page.dart
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/constants.dart';
+import '../../../core/services/custom_cache_manager.dart';
 import 'viewmodel/chat_viewmodel.dart';
 import 'package:senemarket/domain/entities/chat_message.dart';
 
@@ -107,7 +109,18 @@ class _ChatPageState extends State<ChatPage> {
                 if (msg.localImagePath != null || msg.imageUrl != null) {
                   final img = msg.localImagePath != null
                       ? Image.file(File(msg.localImagePath!), width: 200, height: 200, fit: BoxFit.cover)
-                      : GestureDetector(onTap: () => _showImageDetail(msg.imageUrl!), child: Image.network(msg.imageUrl!, width: 200, height: 200, fit: BoxFit.cover));
+                      : GestureDetector(
+                    onTap: () => _showImageDetail(msg.imageUrl!),
+                    child: CachedNetworkImage(
+                      imageUrl: msg.imageUrl!,
+                      cacheManager: CustomCacheManager.instance,
+                      width: 200,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const CircularProgressIndicator(),
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                    ),
+                  );
                   content = Stack(
                     children: [
                       ClipRRect(borderRadius: BorderRadius.circular(12), child: img),
@@ -121,7 +134,14 @@ class _ChatPageState extends State<ChatPage> {
                     ],
                   );
                 } else {
-                  content = Text(msg.text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontFamily: 'Cabin', fontSize: 16));
+                  content = Text(
+                    msg.text,
+                    style: TextStyle(
+                      color: isMe ? Colors.white : Colors.black87,
+                      fontFamily: 'Cabin',
+                      fontSize: 16,
+                    ),
+                  );
                 }
 
                 return Align(
@@ -149,7 +169,7 @@ class _ChatPageState extends State<ChatPage> {
                           if (msg.senderId == vm.currentUserId) Icon(
                             msg.status == MessageStatus.pending ? Icons.access_time : msg.status == MessageStatus.sent ? Icons.check : Icons.done_all,
                             size: 14,
-                            color: msg.status == MessageStatus.read ? Colors.blue : (isMe ? Colors.white70 : Colors.grey),
+                            color: msg.status == MessageStatus.read ? Colors.white70 : (isMe ? Colors.white70 : Colors.grey),
                           ),
                         ]),
                       ],
