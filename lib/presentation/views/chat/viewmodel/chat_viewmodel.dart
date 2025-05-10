@@ -10,7 +10,6 @@ import 'package:senemarket/core/services/connectivity_service.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import '../../../../data/local/models/operation.dart';
 
-/// ViewModel de chat con placeholders y reenvío filtrado por conversación
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepo;
   final ConnectivityService _connectivity;
@@ -30,17 +29,12 @@ class ChatViewModel extends ChangeNotifier {
       this.currentUserId,
       this.otherUserId,
       ) {
-    // 0) Cargar placeholders SOLO de este chat
-    final pendingOps = _opQueue.pending().where((op) {
-      if (op.type != OperationType.sendMessage) return false;
-      final sender = op.payload['senderId'] as String?;
-      final receiver = op.payload['receiverId'] as String?;
-      return sender == currentUserId && receiver == otherUserId;
-    });
+    // 0) Cargar placeholders de operaciones pendientes
+    final pendingOps = _opQueue.pending().where((op) => op.type == OperationType.sendMessage);
     for (var op in pendingOps) {
       final payload = op.payload;
       final rawTs = payload['timestamp'];
-      final ts = rawTs is String ? DateTime.parse(rawTs) : rawTs as DateTime;
+      final ts = rawTs is DateTime ? rawTs : DateTime.parse(rawTs as String);
       final msg = ChatMessage(
         id: op.id,
         senderId: payload['senderId'] as String,
@@ -54,19 +48,21 @@ class ChatViewModel extends ChangeNotifier {
       messages.add(msg);
     }
 
-    // 1) Escuchar mensajes en Firestore y combinarlos
+    // 1) Escuchar mensajes en Firestore y combinar con placeholders
     _sub = _chatRepo.getMessages(currentUserId, otherUserId).listen((remoteMsgs) {
-      final placeholderMap = { for (var m in messages.where((m) => m.status == MessageStatus.pending)) m.id : m };
+      final placeholders = { for (var m in messages.where((m) => m.status == MessageStatus.pending)) m.id : m };
       final combined = <ChatMessage>[];
       for (var r in remoteMsgs) {
-        if (placeholderMap.containsKey(r.id)) {
-          placeholderMap.remove(r.id);
+        if (placeholders.containsKey(r.id)) {
+          // Mensaje pendiente ahora confirmado en remoto, sustituir
+          placeholders.remove(r.id);
           combined.add(r);
         } else {
           combined.add(r);
         }
       }
-      combined.addAll(placeholderMap.values);
+      // Añadir placeholders restantes al final
+      combined.addAll(placeholders.values);
 
       messages = combined;
       isLoading = false;
@@ -82,7 +78,7 @@ class ChatViewModel extends ChangeNotifier {
       print('Error loading messages: \$e');
     });
 
-    // 2) Reintentar operaciones de ESTE chat al reconectar
+    // 2) Escuchar cambios de conectividad para reenviar pendientes
     _connSub = _connectivity.isOnline$.listen((online) {
       if (online) _flushPending();
     });
@@ -123,7 +119,7 @@ class ChatViewModel extends ChangeNotifier {
     final online = await _connectivity.isOnline$.first;
     final status = online ? MessageStatus.sent : MessageStatus.pending;
 
-    // Placeholder local
+    // 1) Crear placeholder local
     final msg = ChatMessage(
       id: id,
       senderId: currentUserId,
@@ -137,7 +133,7 @@ class ChatViewModel extends ChangeNotifier {
     messages.add(msg);
     notifyListeners();
 
-    // Subida/envío
+    // 2) Intentar subir y enviar
     if (online) {
       try {
         final path = 'chat_images/${now.millisecondsSinceEpoch}.jpg';
@@ -181,45 +177,42 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   void _flushPending() async {
-    final ops = _opQueue.pending().where((op) {
-      if (op.type != OperationType.sendMessage) return false;
-      final sender = op.payload['senderId'] as String?;
-      final receiver = op.payload['receiverId'] as String?;
-      return sender == currentUserId && receiver == otherUserId;
-    });
+    final ops = _opQueue.pending();
     for (var op in ops) {
-      final payload = op.payload;
-      File? file;
-      String? url;
-      if (payload.containsKey('localImagePath')) {
-        file = File(payload['localImagePath'] as String);
-        final now = DateTime.now();
-        final path = 'chat_images/${now.millisecondsSinceEpoch}.jpg';
-        final ref = FirebaseStorage.instance.ref().child(path);
-        final task = await ref.putFile(file);
-        url = await task.ref.getDownloadURL();
-      }
-      final rawTs = payload['timestamp'];
-      final ts = rawTs is String ? DateTime.parse(rawTs) : rawTs as DateTime;
-      final msg = ChatMessage(
-        id: op.id,
-        senderId: payload['senderId'] as String,
-        receiverId: payload['receiverId'] as String,
-        text: payload['message'] as String,
-        timestamp: ts,
-        imageUrl: url,
-        localImagePath: null,
-        status: MessageStatus.sent,
-      );
-      try {
-        await _chatRepo.sendMessage(msg);
-        await _opQueue.remove(op.id);
-        final idx = messages.indexWhere((m) => m.id == op.id);
-        if (idx >= 0) {
-          messages[idx] = msg;
-          notifyListeners();
+      if (op.type == OperationType.sendMessage) {
+        final payload = op.payload;
+        File? file;
+        String? url;
+        if (payload.containsKey('localImagePath')) {
+          file = File(payload['localImagePath'] as String);
+          final now = DateTime.now();
+          final path = 'chat_images/${now.millisecondsSinceEpoch}.jpg';
+          final ref = FirebaseStorage.instance.ref().child(path);
+          final task = await ref.putFile(file);
+          url = await task.ref.getDownloadURL();
         }
-      } catch (_) {}
+        final rawTs = payload['timestamp'];
+        final ts = rawTs is String ? DateTime.parse(rawTs) : rawTs as DateTime;
+        final msg = ChatMessage(
+          id: op.id,
+          senderId: payload['senderId'] as String,
+          receiverId: payload['receiverId'] as String,
+          text: payload['message'] as String,
+          timestamp: ts,
+          imageUrl: url,
+          localImagePath: null,
+          status: MessageStatus.sent,
+        );
+        try {
+          await _chatRepo.sendMessage(msg);
+          await _opQueue.remove(op.id);
+          final idx = messages.indexWhere((m) => m.id == op.id);
+          if (idx >= 0) {
+            messages[idx] = msg;
+            notifyListeners();
+          }
+        } catch (_) {}
+      }
     }
   }
 

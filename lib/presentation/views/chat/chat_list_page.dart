@@ -37,7 +37,7 @@ class _ChatListPageState extends State<ChatListPage> {
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
         title: const Text(
-            'Chats',
+          'Chats',
           style: TextStyle(
             fontFamily: 'Cabin',
             fontSize: 24,
@@ -57,11 +57,50 @@ class _ChatListPageState extends State<ChatListPage> {
         itemBuilder: (ctx, i) {
           final chat = vm.users[i];
           final name = chat['name'] as String;
-          final lastMessage = chat['lastMessage'] as String? ?? '';
+          final lastMessageRaw = chat['lastMessage'] as String? ?? '';
+          final isMine = chat['lastSenderId'] ==
+              FirebaseAuth.instance.currentUser?.uid;
+          final seen = chat['seen'] as bool? ?? false;
           final DateTime? ts = chat['lastTimestamp'] as DateTime?;
-          final timeLabel = ts != null
-              ? DateFormat('hh:mm a').format(ts)
-              : '';
+          final timeLabel =
+          ts != null ? DateFormat('hh:mm a').format(ts) : '';
+
+          Widget lastMessageWidget;
+          if (isMine) {
+            lastMessageWidget = Row(
+              children: [
+                Icon(
+                  seen ? Icons.done_all : Icons.check,
+                  size: 16,
+                  color: seen ? Colors.blue : Colors.grey,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    lastMessageRaw,
+                    style: TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+          } else {
+            lastMessageWidget = Text(
+              lastMessageRaw,
+              style: TextStyle(
+                fontFamily: 'Cabin',
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            );
+          }
 
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -74,7 +113,8 @@ class _ChatListPageState extends State<ChatListPage> {
               },
             ),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              margin: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 6),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -115,16 +155,7 @@ class _ChatListPageState extends State<ChatListPage> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          lastMessage,
-                          style: TextStyle(
-                            fontFamily: 'Cabin',
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        lastMessageWidget,
                       ],
                     ),
                   ),

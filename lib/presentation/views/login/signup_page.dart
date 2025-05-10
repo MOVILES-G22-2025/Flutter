@@ -79,12 +79,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Full name
                 CustomTextField(controller: _nameController, label: 'Full name',
                   onChanged: (value) {
-                  if (value.length > 40) {
-                    setState(() => _nameLengthError = ErrorMessages.maxChar);
-                  } else {
-                    setState(() => _nameLengthError = null);
-                  }
-                },
+                    if (value.length > 40) {
+                      setState(() => _nameLengthError = ErrorMessages.maxChar);
+                    } else {
+                      setState(() => _nameLengthError = null);
+                    }
+                  },
                 ),
                 ErrorText(_nameLengthError),
                 const SizedBox(height: 8),
@@ -92,12 +92,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Uniandes email
                 CustomTextField(controller: _emailController, label: 'Uniandes email',
                   onChanged: (value) {
-                  if (value.isNotEmpty && !value.endsWith('@uniandes.edu.co')) {
-                    setState(() => _emailFormatError = ErrorMessages.invalidEmailDomain);
-                  } else {
-                    setState(() => _emailFormatError = null);
-                  }
-                },
+                    if (value.isNotEmpty && !value.endsWith('@uniandes.edu.co')) {
+                      setState(() => _emailFormatError = ErrorMessages.invalidEmailDomain);
+                    } else {
+                      setState(() => _emailFormatError = null);
+                    }
+                  },
                 ),
                 ErrorText(_emailFormatError),
                 const SizedBox(height: 8),
@@ -138,12 +138,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 //Semester
                 CustomTextField(controller: _semesterController, label: 'Semester', isNumeric: true,
                   onChanged: (value) {
-                  final intSemester = int.tryParse(value);
-                  if (intSemester != null && (intSemester < 1 || intSemester > 20)) {
-                    setState(() => _semesterRangeError = ErrorMessages.semesterRange);
-                  } else {
-                    setState(() => _semesterRangeError = null);
-                  }
+                    final intSemester = int.tryParse(value);
+                    if (intSemester != null && (intSemester < 1 || intSemester > 20)) {
+                      setState(() => _semesterRangeError = ErrorMessages.semesterRange);
+                    } else {
+                      setState(() => _semesterRangeError = null);
+                    }
                   },
                 ),
                 ErrorText(_semesterRangeError),
@@ -152,22 +152,22 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Password
                 PasswordField(controller: _passwordController, label: 'Password',
                   onChanged: (value) {
-                  if (_confirmPasswordController.text != value) {
-                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
-                  } else {
-                    setState(() => _passwordMatchError = null);
-                  }
+                    if (_confirmPasswordController.text != value) {
+                      setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                    } else {
+                      setState(() => _passwordMatchError = null);
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
                 ConfirmPasswordField(controller: _confirmPasswordController, label: 'Confirm password',
                   onChanged: (value) {
-                  if (value != _passwordController.text) {
-                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
-                  } else {
-                    setState(() => _passwordMatchError = null);
-                  }
-                },
+                    if (value != _passwordController.text) {
+                      setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                    } else {
+                      setState(() => _passwordMatchError = null);
+                    }
+                  },
                 ),
                 ErrorText(_passwordMatchError),
                 const SizedBox(height: 8),

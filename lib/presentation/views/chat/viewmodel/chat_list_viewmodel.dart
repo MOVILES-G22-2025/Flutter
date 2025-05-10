@@ -17,7 +17,7 @@ class ChatListViewModel extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
 
-      // 1) Obtener todos los mensajes donde el usuario es sender o receiver
+      //Obtener todos los mensajes donde el usuario es sender o receiver
       final chatSnap = await _firestore
           .collection('chats')
           .where('senderId', whereIn: [currentUserId])
@@ -27,41 +27,53 @@ class ChatListViewModel extends ChangeNotifier {
           .where('receiverId', whereIn: [currentUserId])
           .get();
 
-      // 2) Mapear contactos y su último timestamp
-      final Map<String, DateTime> lastTimestamps = {};
+      //Mapear contactos y su último timestamp
+      final Map<String, Map<String, dynamic>> lastMessages = {};
+
       for (var doc in [...chatSnap.docs, ...chatSnap2.docs]) {
         final data = doc.data();
         final sender = data['senderId'] as String?;
         final receiver = data['receiverId'] as String?;
         final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final message = data['message'] as String? ?? '';
         String? other;
         if (sender == currentUserId && receiver != null) other = receiver;
         if (receiver == currentUserId && sender != null) other = sender;
+
         if (other != null && other != currentUserId) {
-          final prev = lastTimestamps[other];
-          if (prev == null || ts.isAfter(prev)) {
-            lastTimestamps[other] = ts;
+          final prev = lastMessages[other];
+          if (prev == null || ts.isAfter(prev['timestamp'] as DateTime)) {
+            lastMessages[other] = {
+              'timestamp': ts,
+              'message': message,
+              'senderId': sender,
+              'seen': data['seen'] ?? false,
+            };
           }
         }
       }
 
-      // 3) Obtener datos de usuario y construir lista
+      //Obtener datos de usuario y construir lista
       final List<Map<String, dynamic>> list = [];
-      for (var entry in lastTimestamps.entries) {
+      for (var entry in lastMessages.entries) {
         final id = entry.key;
         final last = entry.value;
         final userDoc = await _firestore.collection('users').doc(id).get();
+
         if (userDoc.exists) {
           final data = userDoc.data()!;
           list.add({
             'userId': id,
             'name': data['name'] as String? ?? 'Unnamed',
-            'lastTimestamp': last,
+            'lastTimestamp': last['timestamp'],
+            'lastMessage': last['message'],
+            'lastSenderId': last['senderId'],
+            'seen': last['seen'],
           });
         }
       }
 
-      // 4) Ordenar por lastTimestamp descendente
+      //Ordenar por lastTimestamp descendente
       list.sort((a, b) {
         final ta = a['lastTimestamp'] as DateTime;
         final tb = b['lastTimestamp'] as DateTime;
