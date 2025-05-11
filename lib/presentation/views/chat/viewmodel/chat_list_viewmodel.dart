@@ -7,6 +7,8 @@ class ChatListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   List<Map<String, dynamic>> users = [];
+  int totalUnreadChats = 0;
+
   bool isLoading = false;
 
   StreamSubscription? _chatSubscription;
@@ -91,6 +93,8 @@ class ChatListViewModel extends ChangeNotifier {
 
     final results = await Future.wait(futures);
     users = results.whereType<Map<String, dynamic>>().toList();
+
+    totalUnreadChats = users.where((u) => u['unreadCount'] > 0).length;
 
     users.sort((a, b) =>
         (b['lastTimestamp'] as DateTime).compareTo(a['lastTimestamp'] as DateTime));
