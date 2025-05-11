@@ -172,13 +172,14 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (ctx) => SignUpViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => ProductSearchViewModel(ctx.read<ProductRepository>())),
         ChangeNotifierProvider(
-          create: (ctx) {
-            final vm = AddProductViewModel(ctx.read<ProductRepository>());
-            ctx.read<ConnectivityService>().isOnline$.listen(vm.setConnectivity);
-            return vm;
-          },
+          create: (ctx) => AddProductViewModel(
+            ctx.read<ProductRepository>(),
+            connectivityStream: ctx.read<ConnectivityService>().isOnline$,
+          ),
         ),
-        ChangeNotifierProvider(create: (_) => FavoritesViewModel()),
+        ChangeNotifierProvider(
+          create: (ctx) => FavoritesViewModel(ctx.read<FavoritesRepository>()),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

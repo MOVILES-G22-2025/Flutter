@@ -21,12 +21,22 @@ class AppColors {
 class ProductClassification {
   static const List<String> categories = [
     "Academic materials",
-    "Technology and electronics",
+    "Technology & electronics",
     "Transportation",
-    "Clothing and accessories",
+    "Clothing & accessories",
     "Housing",
     "Entertainment",
-    "Sports and fitness"
+    "Sports & fitness",
+    "Furniture",
+    "Books",
+    "Health & Beauty",
+    "Music & Instruments",
+    "Toys & Games",
+    "Pet supplies",
+    "Services",
+    "Art & Collectibles",
+    "Garden & Outdoor",
+    "Food & Beverages",
   ];
 }
 

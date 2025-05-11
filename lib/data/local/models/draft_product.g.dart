@@ -23,14 +23,16 @@ class DraftProductAdapter extends TypeAdapter<DraftProduct> {
       price: fields[3] as double,
       category: fields[4] as String,
       userId: fields[5] as String,
-      createdAt: fields[6] as DateTime,
+      createdAt: fields[6] as DateTime?,
+      imagePaths: (fields[7] as List?)?.cast<String>(),
+      lastUpdated: fields[8] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DraftProduct obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +46,11 @@ class DraftProductAdapter extends TypeAdapter<DraftProduct> {
       ..writeByte(5)
       ..write(obj.userId)
       ..writeByte(6)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.imagePaths)
+      ..writeByte(8)
+      ..write(obj.lastUpdated);
   }
 
   @override

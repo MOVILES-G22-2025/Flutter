@@ -45,7 +45,7 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('My Drafts',
+        title: const Text('My drafts',
             style: TextStyle(
               fontFamily: 'Cabin',
               fontWeight: FontWeight.bold,
@@ -55,7 +55,7 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primary30),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       bottomNavigationBar: const NavigationBarApp(selectedIndex: 4),
       body: drafts.isEmpty
@@ -104,15 +104,12 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
               if (confirm == true) {
                 final deleted = draft;
 
-                // 🔥 BORRAR DEL HIVE
                 await deleted.delete();
 
-                // 🔥 BORRAR DEL LISTADO ACTUAL
                 setState(() {
                   drafts.removeAt(index);
                 });
 
-                // ✅ MOSTRAR SNACKBAR CON UNDO
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text("Draft '${deleted.name}' deleted"),
