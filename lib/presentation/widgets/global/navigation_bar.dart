@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:senemarket/constants.dart';
+
+import '../../views/chat/viewmodel/chat_list_viewmodel.dart';
 
 class NavigationBarApp extends StatefulWidget {
   final int selectedIndex;
@@ -75,8 +78,10 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
             backgroundColor: Colors.transparent,
             selectedItemColor: AppColors.primary30,
             unselectedItemColor: AppColors.primary0,
-            selectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
-            unselectedLabelStyle: const TextStyle(fontFamily: 'Cabin', fontSize: 12),
+            selectedLabelStyle: const TextStyle(
+                fontFamily: 'Cabin', fontSize: 12),
+            unselectedLabelStyle: const TextStyle(
+                fontFamily: 'Cabin', fontSize: 12),
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: _buildIcon(Icons.home_outlined, 0),
@@ -106,16 +111,53 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
   }
 
   Widget _buildIcon(IconData icon, int index) {
-    bool isSelected = widget.selectedIndex == index;
-    IconData finalIcon = isSelected && _filledIconMapping.containsKey(icon)
+    final unread = context
+        .watch<ChatListViewModel>()
+        .totalUnreadChats;
+    final isSelected = widget.selectedIndex == index;
+    final finalIcon = isSelected && _filledIconMapping.containsKey(icon)
         ? _filledIconMapping[icon]!
         : icon;
 
-    return Icon(
+    Widget iconWidget = Icon(
       finalIcon,
       size: 26,
       color: isSelected ? AppColors.primary30 : AppColors.primary0,
     );
+
+    // Solo mostrar badge si es el ícono de chats
+    if (index == 1 && unread > 0) {
+      iconWidget = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          iconWidget,
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                  color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              child: Center(
+                child: Text(
+                  '$unread',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return iconWidget;
   }
 
   Widget _buildSellIcon(int index) {
@@ -131,10 +173,11 @@ class _NavigationBarAppState extends State<NavigationBarApp> {
           borderRadius: BorderRadius.circular(18.0),
           border: Border.all(color: AppColors.primary30, width: 2),
         ),
-        child: Column(
+        child: const Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.file_upload_outlined, color: AppColors.primary0, size: 26),
+          children: [
+            Icon(Icons.file_upload_outlined, color: AppColors.primary0,
+                size: 26),
             SizedBox(height: 2),
             Text(
               'Sell',

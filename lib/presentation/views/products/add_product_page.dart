@@ -271,7 +271,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   CustomTextField(controller: _priceController, label: 'Price', isNumeric: true, onChanged: (_) => _validateForm()),
                   ErrorText(_priceError),
                   const SizedBox(height: 20),
-// Botón principal “Add”
+                  // Botón principal “Add”
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFormValid
@@ -317,7 +317,7 @@ class _AddProductPageState extends State<AddProductPage> {
                         price: double.tryParse(_priceController.text.trim()),
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Borrador guardado')),
+                        const SnackBar(content: Text('Saved draft')),
                       );
                     },
                   ),
