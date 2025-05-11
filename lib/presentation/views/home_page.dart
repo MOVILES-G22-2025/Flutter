@@ -55,9 +55,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _listenToProducts() async {
-    _productRepo.getProductsStream().listen((products) {
-      setState(() => _allProducts = products);
-    });
+    final online = await _productRepo.connectivity.isOnline$.first;
+    
+    if (online) {
+      // Online: usar stream de Firestore
+      _productRepo.getProductsStream().listen((products) {
+        setState(() => _allProducts = products);
+      });
+    } else {
+      // Offline: usar caché local
+      final cachedProducts = await _productRepo.getCachedProducts();
+      setState(() => _allProducts = cachedProducts);
+    }
   }
 
   Future<void> _loadUserClicks() async {
