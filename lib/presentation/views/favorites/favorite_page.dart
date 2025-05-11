@@ -95,15 +95,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              '(${filtered.length})',
-              style: const TextStyle(
-                fontFamily: 'Cabin',
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary0,
-              ),
-            ),
           ],
         ),
       ),
@@ -117,7 +108,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: searchBar.SearchBar(
               controller: _searchController,
-              hintText: 'Buscar en favoritos...',
+              hintText: 'Search in favorites...',
               onChanged: (val) => setState(() => _searchQuery = val),
             ),
           ),
