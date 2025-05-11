@@ -1,13 +1,8 @@
-// lib/presentation/views/chat/viewmodel/chat_list_viewmodel.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../../domain/entities/chat_message.dart';
 
-/// ViewModel for fetching the list of chat contacts (users with at least one message),
-/// ordered by most recent message first.
 class ChatListViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -17,15 +12,14 @@ class ChatListViewModel extends ChangeNotifier {
   StreamSubscription? _chatSubscription;
 
   void listenToChats(String currentUserId) {
-    _chatSubscription?.cancel(); // cancelar si ya existe
+    _chatSubscription?.cancel();
 
-    _chatSubscription = FirebaseFirestore.instance
+    _chatSubscription = _firestore
         .collection('chats')
         .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
       final docs = snapshot.docs;
-      // filtra y actualiza users con lógica actual
       _processMessages(docs, currentUserId);
     });
   }
@@ -36,6 +30,7 @@ class ChatListViewModel extends ChangeNotifier {
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
       final sender = data['senderId'] as String?;
+      final imageUrl = data['imageUrl'] as String?;
       final receiver = data['receiverId'] as String?;
       final ts = (data['timestamp'] as Timestamp?)?.toDate();
       final message = data['message'] as String? ?? '';
@@ -63,34 +58,55 @@ class ChatListViewModel extends ChangeNotifier {
           'message': message,
           'senderId': sender,
           'status': status,
+          'imageUrl': data['imageUrl'],
         };
       }
     }
 
-    final List<Map<String, dynamic>> updatedUsers = [];
+    final List<Future<Map<String, dynamic>?>> futures = [];
 
     for (var entry in lastMessages.entries) {
       final userId = entry.key;
       final last = entry.value;
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) continue;
 
-      final userData = userDoc.data()!;
-      updatedUsers.add({
-        'userId': userId,
-        'name': userData['name'] ?? 'Sin nombre',
-        'lastTimestamp': last['timestamp'],
-        'lastMessage': last['message'],
-        'lastSenderId': last['senderId'],
-        'status': last['status'],
-      });
+      futures.add(Future(() async {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        if (!userDoc.exists) return null;
+
+        final userData = userDoc.data()!;
+        final unreadCount = await _countUnreadMessages(currentUserId, userId);
+
+        return {
+          'userId': userId,
+          'name': userData['name'] ?? 'Sin nombre',
+          'lastTimestamp': last['timestamp'],
+          'lastMessage': last['message'],
+          'lastSenderId': last['senderId'],
+          'status': last['status'],
+          'unreadCount': unreadCount,
+          'imageUrl': last['imageUrl'],
+        };
+      }));
     }
 
-    updatedUsers.sort((a, b) =>
+    final results = await Future.wait(futures);
+    users = results.whereType<Map<String, dynamic>>().toList();
+
+    users.sort((a, b) =>
         (b['lastTimestamp'] as DateTime).compareTo(a['lastTimestamp'] as DateTime));
 
-    users = updatedUsers;
     notifyListeners();
+  }
+
+  Future<int> _countUnreadMessages(String myId, String otherId) async {
+    final unreadSnap = await _firestore
+        .collection('chats')
+        .where('senderId', isEqualTo: otherId)
+        .where('receiverId', isEqualTo: myId)
+        .get();
+
+    final unreadMessages = unreadSnap.docs.where((doc) => doc['status'] != 'read').toList();
+    return unreadMessages.length;
   }
 
   @override

@@ -35,7 +35,6 @@ class _ChatListPageState extends State<ChatListPage> {
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.primary50,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
         title: const Text(
           'Chats',
@@ -63,9 +62,13 @@ class _ChatListPageState extends State<ChatListPage> {
           final chat = vm.users[i];
           final name = chat['name'] as String;
           final lastMessageRaw = chat['lastMessage'] as String? ?? '';
+          final imageUrl = chat['imageUrl'] as String?;
+          final isImage = lastMessageRaw.trim().isEmpty && imageUrl != null;
           final isMine = chat['lastSenderId'] ==
               FirebaseAuth.instance.currentUser?.uid;
           final status = chat['status'] as MessageStatus? ?? MessageStatus.sent;
+          final unreadCount = chat['unreadCount'] as int? ?? 0;
+          final showUnreadBadge = !isMine && unreadCount > 0;
           final DateTime? ts = chat['lastTimestamp'] as DateTime?;
           final timeLabel =
           ts != null ? DateFormat('hh:mm a').format(ts) : '';
@@ -81,7 +84,22 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: Text(
+                  child: isImage
+                      ? const Row(
+                    children: [
+                      Icon(Icons.image, size: 16, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        'Image',
+                        style: TextStyle(
+                          fontFamily: 'Cabin',
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  )
+                      : Text(
                     lastMessageRaw,
                     style: TextStyle(
                       fontFamily: 'Cabin',
@@ -95,7 +113,22 @@ class _ChatListPageState extends State<ChatListPage> {
               ],
             );
           } else {
-            lastMessageWidget = Text(
+            lastMessageWidget = isImage
+                ? Row(
+              children: const [
+                Icon(Icons.image, size: 16, color: Colors.grey),
+                SizedBox(width: 4),
+                Text(
+                  'Image',
+                  style: TextStyle(
+                    fontFamily: 'Cabin',
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            )
+                : Text(
               lastMessageRaw,
               style: TextStyle(
                 fontFamily: 'Cabin',
@@ -164,15 +197,37 @@ class _ChatListPageState extends State<ChatListPage> {
                       ],
                     ),
                   ),
-                  if (timeLabel.isNotEmpty) ...[
-                    Text(
-                      timeLabel,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (timeLabel.isNotEmpty)
+                        Text(
+                          timeLabel,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      if (showUnreadBadge)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary30,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
