@@ -60,14 +60,17 @@ class AddProductViewModel extends ChangeNotifier {
       userId: '',
     );
 
-    try {
-      await _productRepository.addProduct(images: images, product: product);
-    } catch (e) {
+    _productRepository
+        .addProduct(images: images, product: product)
+        .then((_) {
+    })
+        .catchError((e) {
       errorMessage = e.toString();
-    }
-
-    isLoading = false;
-    notifyListeners();
+    })
+        .whenComplete(() {
+      isLoading = false;
+      notifyListeners();
+    });
   }
 
   Future<void> saveProductOffline({
@@ -105,10 +108,6 @@ class AddProductViewModel extends ChangeNotifier {
     } catch (e) {
       errorMessage = 'Error saving product locally: $e';
     }
-
-
-
-
 
     isLoading = false;
     notifyListeners();
