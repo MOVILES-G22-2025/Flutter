@@ -68,7 +68,7 @@ class _AddProductPageState extends State<AddProductPage> {
     ..category    = _selectedCategory ?? ''
     ..imagePaths  = _images.where((f) => f!=null).map((f) => f!.path).toList()
     ..lastUpdated = DateTime.now();
-    draft.save();
+    _draftBox.put(_draftKey, draft);
   }
 
   void _validateForm() {
@@ -92,14 +92,14 @@ class _AddProductPageState extends State<AddProductPage> {
 
   Future<void> _showOfflineConfirmation() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(seconds: 3),
+        margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: Duration(seconds: 3),
         backgroundColor: constants.AppColors.primary30,
         content: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             SizedBox(
               width: 20,
               height: 20,
@@ -121,9 +121,6 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-
-
-
   Future<void> _pickImageFromCamera() async {
     if (_images.length >= 5) {
       _showSnackBar("You can only upload up to 5 images");
@@ -141,7 +138,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
   Future<void> _pickImageFromGallery() async {
     if (_images.length >= 5) {
-      _showSnackBar("Max 5 images allowed");
+      _showSnackBar("Maximum 5 images allowed");
       return;
     }
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
@@ -174,7 +171,7 @@ class _AddProductPageState extends State<AddProductPage> {
         category: _selectedCategory!,
         price: double.tryParse(_priceController.text.trim()) ?? 0.0,
       );
-      // ▶️ Mostramos diálogo animado
+      //Mostramos diálogo animado
       await _showOfflineConfirmation();
       // Navegar a Home limpiando stack
       Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
@@ -272,12 +269,12 @@ class _AddProductPageState extends State<AddProductPage> {
                   ErrorText(_priceError),
                   const SizedBox(height: 20),
                   // Botón principal “Add”
-                  ElevatedButton(
+                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFormValid
                           ? constants.AppColors.primary30
                           : constants.AppColors.secondary40,
-                      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 150, vertical: 14),
                       textStyle: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 18,
@@ -297,7 +294,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 8),
 
-// Botón secundario “Guardar borrador”
+                  // Botón secundario “Guardar borrador”
                   TextButton.icon(
                     icon: const Icon(Icons.save_alt, color: constants.AppColors.primary30),
                     label: const Text(
@@ -305,7 +302,7 @@ class _AddProductPageState extends State<AddProductPage> {
                       style: TextStyle(
                         color: constants.AppColors.primary30,
                         fontFamily: 'Cabin',
-                        fontSize: 14,
+                        fontSize: 18,
                       ),
                     ),
                     onPressed: () async {
@@ -329,7 +326,7 @@ class _AddProductPageState extends State<AddProductPage> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBarApp(selectedIndex: 2),
+      bottomNavigationBar: const NavigationBarApp(selectedIndex: 2),
     );
   }
 }

@@ -202,7 +202,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 12),
                   IconButton(
                     icon: const Icon(Icons.shopping_cart_outlined),
-                    color: constants.AppColors.secondary30,
+                    color: Colors.black,
                     iconSize: 28,
                     onPressed: () =>
                         Navigator.pushNamed(context, '/cart'),

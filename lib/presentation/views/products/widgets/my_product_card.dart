@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/constants.dart';
-
 import '../../../../core/services/custom_cache_manager.dart';
 
 class MyProductCard extends StatefulWidget {

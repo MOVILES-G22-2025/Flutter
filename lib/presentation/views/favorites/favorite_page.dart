@@ -160,7 +160,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 ? _buildEmptyState()
                 : _isGrid
                 ? _buildGrid(filtered)
-                : _buildList(filtered), // <-- ahora lista
+                : _buildList(filtered),
           ),
         ],
       ),
@@ -193,7 +193,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Explore products'),
+            child: const Text('Explore products',
+                style: TextStyle(
+              fontFamily: 'Cabin',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            )),
           ),
         ],
       ),

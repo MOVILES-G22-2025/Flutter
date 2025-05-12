@@ -46,13 +46,27 @@ class _EditDraftPageState extends State<EditDraftPage> {
         ? widget.draft.category
         : null;
     // load existing image paths if any
-    for (final path in widget.draft.imagePaths) {
-      _images.add(XFile(path));
-    }
+    _loadImages();
     _nameCtrl.addListener(_validateForm);
     _descCtrl.addListener(_validateForm);
     _priceCtrl.addListener(_validateForm);
     _validateForm();
+  }
+
+  Future<void> _loadImages() async {
+    final List<XFile> validImages = [];
+
+    for (final path in widget.draft.imagePaths) {
+      final file = File(path);
+      if (await file.exists()) {
+        validImages.add(XFile(path));
+      }
+    }
+
+    setState(() {
+      _images.clear();
+      _images.addAll(validImages);
+    });
   }
 
   @override
@@ -74,7 +88,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
           : (name.length > 40 ? constants.ErrorMessages.maxChar : null);
       _priceError = price == null
           ? 'Invalid'
-          : (price < 1000 ? 'Min \$1,000' : null);
+          : (price < 1000 ? 'Minimum price is \$1000' : null);
       _isFormValid = _nameError == null &&
           desc.isNotEmpty &&
           _category != null &&
@@ -86,7 +100,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
   Future<void> _pickImage(ImageSource src) async {
     if (_images.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Máx 5 imágenes')),
+        const SnackBar(content: Text('Maximum 5 images allowed')),
       );
       return;
     }
@@ -143,7 +157,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft published ✔️')),
+        const SnackBar(content: Text('Draft published')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,7 +176,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
         centerTitle: true,
         title: const Text(
-          'Edit Draft',
+          'Edit draft',
           style: TextStyle(
             fontFamily: 'Cabin',
             fontSize: 24,
@@ -225,7 +239,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
               isNumeric: true,
               onChanged: (_) => _validateForm(),
             ),
-            if (_priceError != null) ErrorText(_priceError),
+           ErrorText(_priceError),
             const SizedBox(height: 24),
             // Publish button
             ElevatedButton(

@@ -157,7 +157,8 @@ class _SignUpPageState extends State<SignUpPage> {
                 const SizedBox(height: 8),
 
                 if (_localErrorMessage != null)
-                  const ErrorText(ErrorMessages.allFieldsRequired),
+                  ErrorText(_localErrorMessage),
+
                 const SizedBox(height: 8),
 
                 // Register button
@@ -265,6 +266,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (signUpVM.errorMessage.isEmpty) {
       Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      setState(() {
+        _localErrorMessage = signUpVM.errorMessage;
+      });
     }
   }
 }
