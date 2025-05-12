@@ -103,11 +103,11 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (online) {
-      try {
-        await _chatRepo.sendMessage(msg);
-      } catch (_) {
+      //Combinamos async/await con Future handler
+      _chatRepo.sendMessage(msg).then((_) {
+      }).catchError((_) {
         _enqueueMessage(msg);
-      }
+      });
     } else {
       _enqueueMessage(msg);
     }
