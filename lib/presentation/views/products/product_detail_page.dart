@@ -271,7 +271,7 @@ class ProductDetailPageContent extends StatelessWidget {
                             : '', // o alguna imagen por defecto
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Added to cart')),
+                        const SnackBar(content: Text('Added to your shopping cart')),
                       );
                     },
                     icon: const Icon(Icons.shopping_cart_outlined),

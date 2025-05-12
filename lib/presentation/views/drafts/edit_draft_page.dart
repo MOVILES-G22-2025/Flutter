@@ -143,7 +143,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft published ✔️')),
+        const SnackBar(content: Text('Draft published')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,7 +162,7 @@ class _EditDraftPageState extends State<EditDraftPage> {
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
         centerTitle: true,
         title: const Text(
-          'Edit Draft',
+          'Edit draft',
           style: TextStyle(
             fontFamily: 'Cabin',
             fontSize: 24,

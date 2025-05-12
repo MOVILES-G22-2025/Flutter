@@ -39,9 +39,9 @@ class _MyProductsPageState extends State<MyProductsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white, // ← Establece fondo blanco
+        backgroundColor: Colors.white,
         title: const Text(
-          "Delete Product",
+          "Delete product",
           style: TextStyle(
             fontFamily: 'Cabin',
             fontWeight: FontWeight.bold,
@@ -128,7 +128,7 @@ class _MyProductsPageState extends State<MyProductsPage> {
               child: Text(
                 'Press and hold a product to view options',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontFamily: 'Cabin',
                   color: Colors.grey,
                   fontWeight: FontWeight.w400,
@@ -157,7 +157,11 @@ class _MyProductsPageState extends State<MyProductsPage> {
                 }).toList();
 
                 if (displayedProducts.isEmpty) {
-                  return const Center(child: Text("No products found."));
+                  return const Center(child: Text("No products found", style: TextStyle(
+                    fontFamily: 'Cabin',
+                    fontSize: 18,
+                    color: Colors.grey,
+                  ),));
                 }
 
                 return GridView.builder(

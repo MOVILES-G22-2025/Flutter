@@ -31,6 +31,8 @@ import 'package:senemarket/core/services/notification_service.dart';
 import 'package:senemarket/data/local/models/operation.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/data/local/models/draft_product.dart';
+import 'package:senemarket/presentation/views/cart/cart_page.dart';
+import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart';
 
 // ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
@@ -57,6 +59,7 @@ import 'package:senemarket/presentation/views/chat/chat_list_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_page.dart';
 
 import 'data/datasources/product_remote_data_source.dart';
+import 'data/local/models/cart_item.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,8 +75,10 @@ void main() async {
   Hive.registerAdapter(OperationAdapter());
   Hive.registerAdapter(OperationTypeAdapter());
   Hive.registerAdapter(DraftProductAdapter());
+  Hive.registerAdapter(CartItemAdapter());
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
+  await Hive.openBox<CartItem>('cart');
 
   runApp(const SenemarketApp());
 }
@@ -171,6 +176,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (ctx) => SignInViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => SignUpViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => ProductSearchViewModel(ctx.read<ProductRepository>())),
+        ChangeNotifierProvider(create: (_) => CartViewModel()),
         ChangeNotifierProvider(
           create: (ctx) => AddProductViewModel(
             ctx.read<ProductRepository>(),
@@ -195,6 +201,10 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/signIn': (_) => const SignInPage(),
           '/signUp': (_) => const SignUpPage(),
           '/home': (_) => const HomePage(),
+          '/cart': (_) => ChangeNotifierProvider(
+            create: (_) => CartViewModel(),
+            child: const CartPage(),
+          ),
           '/add_product': (_) => const AddProductPage(),
           '/my_products': (_) => const MyProductsPage(),
           '/favorites': (_) => const FavoritesPage(),

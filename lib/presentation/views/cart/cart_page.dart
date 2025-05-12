@@ -24,18 +24,22 @@ class CartPage extends StatelessWidget {
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
-        title: const Text(
-          'Your Cart',
-          style: TextStyle(
-            fontFamily: 'Cabin',
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: constants.AppColors.primary0,
-          ),
-        ),
+        title: const Text('My shopping cart',
+            style: TextStyle(
+              fontFamily: 'Cabin',
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              color: Colors.black,
+            )),
+        centerTitle: true,
       ),
       body: cart.items.isEmpty
-          ? const Center(child: Text('Your cart is empty'))
+          ? const Center(child: Text('Your shopping cart is empty',
+        style: TextStyle(
+        fontFamily: 'Cabin',
+        fontSize: 18,
+        color: Colors.grey,
+      ),))
           : Column(
         children: [
           Expanded(
@@ -146,13 +150,43 @@ class _CartRow extends StatelessWidget {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Remove item'),
-                    content: const Text('Remove this item from your cart?'),
+                    title: const Text(
+                      "Remove item",
+                      style: TextStyle(
+                        fontFamily: 'Cabin',
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    content: const Text(
+                      "Are you sure you want to remove this item from your cart?",
+                      style: TextStyle(
+                        fontFamily: 'Cabin',
+                        color: Colors.black87,
+                      ),
+                    ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                       TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Remove', style: TextStyle(color: Colors.red))),
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(
+                            fontFamily: 'Cabin',
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text(
+                          "Remove",
+                          style: TextStyle(
+                            fontFamily: 'Cabin',
+                            color: constants.AppColors.primary30,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 );

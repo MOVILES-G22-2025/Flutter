@@ -159,7 +159,7 @@ class _EditProductPageState extends State<EditProductPage> {
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
-        title: const Text('Edit Product', style: TextStyle(
+        title: const Text('Edit product', style: TextStyle(
           fontFamily: 'Cabin',
           fontSize: 24,
           fontWeight: FontWeight.bold,
