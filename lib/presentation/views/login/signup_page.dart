@@ -6,6 +6,7 @@ import 'package:senemarket/presentation/widgets/form_fields/password/confirm_pas
 import '../../../constants.dart' as constants;
 import '../../widgets/form_fields/custom_field.dart';
 import '../../widgets/form_fields/password/password_field.dart';
+import '../../widgets/form_fields/searchable_dropdown.dart';
 import '../../widgets/global/error_text.dart';
 import 'viewmodel/sign_up_viewmodel.dart';
 
@@ -22,7 +23,6 @@ class _SignUpPageState extends State<SignUpPage> {
   // Controllers for text inputs
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _careerController = TextEditingController();
   final TextEditingController _semesterController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -80,12 +80,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Full name
                 CustomTextField(controller: _nameController, label: 'Full name',
                   onChanged: (value) {
-                  if (value.length > 40) {
-                    setState(() => _nameLengthError = ErrorMessages.maxChar);
-                  } else {
-                    setState(() => _nameLengthError = null);
-                  }
-                },
+                    if (value.length > 40) {
+                      setState(() => _nameLengthError = ErrorMessages.maxChar);
+                    } else {
+                      setState(() => _nameLengthError = null);
+                    }
+                  },
                 ),
                 ErrorText(_nameLengthError),
                 const SizedBox(height: 8),
@@ -93,12 +93,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Uniandes email
                 CustomTextField(controller: _emailController, label: 'Uniandes email',
                   onChanged: (value) {
-                  if (value.isNotEmpty && !value.endsWith('@uniandes.edu.co')) {
-                    setState(() => _emailFormatError = ErrorMessages.invalidEmailDomain);
-                  } else {
-                    setState(() => _emailFormatError = null);
-                  }
-                },
+                    if (value.isNotEmpty && !value.endsWith('@uniandes.edu.co')) {
+                      setState(() => _emailFormatError = ErrorMessages.invalidEmailDomain);
+                    } else {
+                      setState(() => _emailFormatError = null);
+                    }
+                  },
                 ),
                 ErrorText(_emailFormatError),
                 const SizedBox(height: 8),
@@ -106,45 +106,28 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Career
                 const SizedBox(height: 12),
 
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return const Iterable<String>.empty();
-                    }
-                    return constants.Careers.careers.where((String option) {
-                      return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
-                    });
-                  },
-                  onSelected: (String selection) {
+                SearchableDropdown(
+                  label: 'Main Career',
+                  items: constants.Careers.careers,
+                  selectedItem: _selectedCareer,
+                  onChanged: (String? career) {
                     setState(() {
-                      _selectedCareer = selection;
+                      _selectedCareer = career;
                     });
-                  },
-                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                    controller.text = _selectedCareer ?? '';
-                    return CustomTextField(
-                      label: 'Main Career',
-                      controller: controller,
-                      focusNode: focusNode,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCareer = value;
-                        });
-                      },
-                    );
                   },
                 ),
+
                 const SizedBox(height: 8),
 
                 //Semester
                 CustomTextField(controller: _semesterController, label: 'Semester', isNumeric: true,
                   onChanged: (value) {
-                  final intSemester = int.tryParse(value);
-                  if (intSemester != null && (intSemester < 1 || intSemester > 20)) {
-                    setState(() => _semesterRangeError = ErrorMessages.semesterRange);
-                  } else {
-                    setState(() => _semesterRangeError = null);
-                  }
+                    final intSemester = int.tryParse(value);
+                    if (intSemester != null && (intSemester < 1 || intSemester > 20)) {
+                      setState(() => _semesterRangeError = ErrorMessages.semesterRange);
+                    } else {
+                      setState(() => _semesterRangeError = null);
+                    }
                   },
                 ),
                 ErrorText(_semesterRangeError),
@@ -153,22 +136,22 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Password
                 PasswordField(controller: _passwordController, label: 'Password',
                   onChanged: (value) {
-                  if (_confirmPasswordController.text != value) {
-                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
-                  } else {
-                    setState(() => _passwordMatchError = null);
-                  }
+                    if (_confirmPasswordController.text != value) {
+                      setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                    } else {
+                      setState(() => _passwordMatchError = null);
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
                 ConfirmPasswordField(controller: _confirmPasswordController, label: 'Confirm password',
                   onChanged: (value) {
-                  if (value != _passwordController.text) {
-                    setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
-                  } else {
-                    setState(() => _passwordMatchError = null);
-                  }
-                },
+                    if (value != _passwordController.text) {
+                      setState(() => _passwordMatchError = ErrorMessages.passwordsDoNotMatch);
+                    } else {
+                      setState(() => _passwordMatchError = null);
+                    }
+                  },
                 ),
                 ErrorText(_passwordMatchError),
                 const SizedBox(height: 8),
@@ -241,7 +224,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final career = _careerController.text.trim();
+    final career = _selectedCareer?.trim() ?? '';
     final semester = _semesterController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
@@ -267,7 +250,7 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    if (name.length > 40 || career.length > 40) {
+    if (name.length > 40) {
       setState(() => _localErrorMessage = ErrorMessages.maxChar);
       return;
     }

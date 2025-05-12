@@ -47,8 +47,10 @@ class ProductRemoteDataSource {
     final map = dto.toFirestore()
       ..['timestamp'] = FieldValue.serverTimestamp()
       ..['userId'] = userId;
-
-    await _db.collection('products').add(map);
+    // EN LUGAR DE .add(...)
+    await _db.collection('products')
+        .doc(dto.id)
+        .set(map, SetOptions(merge: true));
   }
 
   /// Returns a live stream of all products ordered by most recent.

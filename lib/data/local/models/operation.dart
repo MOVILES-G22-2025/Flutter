@@ -1,13 +1,21 @@
+// lib/data/local/models/operation.dart
 import 'package:hive/hive.dart';
 
-part 'operation.g.dart';      // para hive_generator
+part 'operation.g.dart';
 
 @HiveType(typeId: 0)
 class Operation extends HiveObject {
-  @HiveField(0) String id;           // uuid
-  @HiveField(1) OperationType type;  // enum
-  @HiveField(2) Map<String, dynamic> payload;
-  @HiveField(3) DateTime ts;
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  OperationType type;
+
+  @HiveField(2)
+  Map<String, dynamic> payload;
+
+  @HiveField(3)
+  DateTime ts;
 
   Operation({
     required this.id,
@@ -19,6 +27,9 @@ class Operation extends HiveObject {
 
 @HiveType(typeId: 1)
 enum OperationType {
-  @HiveField(0) toggleFavorite,
-  // otros vendrán luego (createProduct, etc.)
+  @HiveField(0)
+  toggleFavorite,
+
+  @HiveField(1)
+  sendMessage,     // <-- nuevo tipo de operación
 }
