@@ -53,6 +53,7 @@ import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/products/my_products_page.dart';
 import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
 import 'package:senemarket/presentation/views/profile/profile_page.dart';
+import 'package:senemarket/presentation/views/profile/edit_profile_page.dart';
 import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
 import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_list_page.dart';
@@ -210,6 +211,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/my_products': (_) => const MyProductsPage(),
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
+          '/edit_profile': (_) => const EditProfilePage(),
           '/cart': (_) => const CartPage(),
           '/drafts': (_) => const MyDraftsPage(),
           '/edit_draft': (ctx) {

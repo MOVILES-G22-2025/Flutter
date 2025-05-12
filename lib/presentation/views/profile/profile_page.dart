@@ -196,7 +196,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildOptionTile('Edit profile', Icons.person, () {}),
+                _buildOptionTile('Edit profile', Icons.person, () {
+                  Navigator.pushNamed(context, '/edit_profile');
+                }),
                 _buildOptionTile('My products', Icons.shopping_bag, () {
                   Navigator.pushNamed(context, '/my_products');
                 }),
