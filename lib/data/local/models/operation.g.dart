@@ -58,6 +58,8 @@ class OperationTypeAdapter extends TypeAdapter<OperationType> {
     switch (reader.readByte()) {
       case 0:
         return OperationType.toggleFavorite;
+      case 1:
+        return OperationType.sendMessage;
       default:
         return OperationType.toggleFavorite;
     }
@@ -68,6 +70,9 @@ class OperationTypeAdapter extends TypeAdapter<OperationType> {
     switch (obj) {
       case OperationType.toggleFavorite:
         writer.writeByte(0);
+        break;
+      case OperationType.sendMessage:
+        writer.writeByte(1);
         break;
     }
   }

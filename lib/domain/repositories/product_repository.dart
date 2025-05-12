@@ -1,7 +1,10 @@
 import 'package:image_picker/image_picker.dart';
+import 'package:senemarket/data/local/models/draft_product.dart';
 import '../entities/product.dart';
 
 abstract class ProductRepository {
+  String get currentUserId;
+
   Future<List<Product>> searchProducts(String query);
 
   Future<void> addProduct({
@@ -34,4 +37,13 @@ abstract class ProductRepository {
 
   /// Logs a product click from a user.
   Future<void> logProductClick(String userId, String productId);
+
+  saveOfflineProduct(Map<String, Object> productMap) {}
+
+  saveDraftProduct(DraftProduct draft) {}
+
+  Future<int> getProductClickCount(String productId);
+
+  fetchProductClickCount(String productId) {}
+
 }

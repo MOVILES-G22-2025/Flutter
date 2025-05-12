@@ -1,8 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+
+import '../../../core/services/custom_cache_manager.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -14,6 +20,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   int _selectedIndex = 4;
   String userName = 'User';
+  String? profileImageUrl;
 
   @override
   void initState() {
@@ -24,19 +31,46 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (doc.exists) {
         setState(() {
           userName = doc.data()?['name'] ?? 'User';
+          profileImageUrl = doc.data()?['profileImageUrl'];
         });
       }
     }
   }
 
-  void _logout() async {
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final storageRef =
+        FirebaseStorage.instance.ref().child('profile_images/${user.uid}.jpg');
+    await storageRef.putFile(File(picked.path));
+    final downloadUrl = await storageRef.getDownloadURL();
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'profileImageUrl': downloadUrl,
+    });
+
+    setState(() {
+      profileImageUrl = downloadUrl;
+    });
+  }
+
+  Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
+
 
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
@@ -125,11 +159,29 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Center(
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.grey,
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey,
+                      child: profileImageUrl != null
+                          ? ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: profileImageUrl!,
+                                cacheManager: CustomCacheManager.instance,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    const CircularProgressIndicator(),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                              ),
+                            )
+                          : const Icon(Icons.person,
+                              size: 50, color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -144,7 +196,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 _buildOptionTile('Edit profile', Icons.person, () {}),
                 _buildOptionTile('My products', Icons.shopping_bag, () {
                   Navigator.pushNamed(context, '/my_products');
@@ -158,15 +209,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 90),
               ],
             ),
-
-            // Logout button (bottom right)
             Positioned(
               bottom: 16,
               right: 0,
               child: ElevatedButton.icon(
                 onPressed: _logout,
                 icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text('Logout', style: TextStyle(color: Colors.white)),
+                label:
+                    const Text('Logout', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade400,
                   shape: const RoundedRectangleBorder(
@@ -177,7 +227,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       bottomRight: Radius.circular(0),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ),

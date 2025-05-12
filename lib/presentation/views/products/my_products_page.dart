@@ -100,7 +100,7 @@ class _MyProductsPageState extends State<MyProductsPage> {
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
         title: const Text(
-          'My Products',
+          'My products',
           style: TextStyle(
             fontFamily: 'Cabin',
             fontSize: 24,

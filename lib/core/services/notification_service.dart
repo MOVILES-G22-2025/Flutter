@@ -24,8 +24,8 @@ class NotificationService {
 
     await _plugin.show(
       0,
-      'Tienes productos pendientes',
-      'No olvides completarlos y subir sus imágenes',
+      'You have pending products',
+      'Do not forget to complete them and upload their images',
       notification,
     );
   }
