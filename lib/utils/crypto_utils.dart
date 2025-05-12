@@ -1,7 +1,9 @@
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
-/// Retorna el hash SHA256 de una contraseña, útil para validación offline
+/// Convierte la contraseña en un hash SHA256
 String hashPassword(String password) {
-  return sha256.convert(utf8.encode(password)).toString();
+  final bytes = utf8.encode(password);
+  return sha256.convert(bytes).toString();
 }
+

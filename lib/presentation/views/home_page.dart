@@ -1,6 +1,8 @@
+// lib/presentation/views/home_page.dart
+
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
@@ -11,14 +13,22 @@ import 'package:senemarket/constants.dart' as constants;
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
 
+import 'package:senemarket/data/local/services/local_storage_service.dart';
+import 'package:senemarket/data/local/models/user_session.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
-
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  // --- New session fields ---
+  String? _userId;
+  bool _loadingSession = true;
+  UserSessionModel? _session;
+
+  // --- Existing state fields ---
   int _selectedIndex = 0;
   String _sortOrder = 'Newest first';
   String? _sortPrice;
@@ -33,25 +43,44 @@ class _HomePageState extends State<HomePage> {
   int _currentRecPage = 0;
   bool _showRecommended = true;
 
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
   final _productRepo = ProductRepositoryImpl();
 
   @override
   void initState() {
     super.initState();
-    // kick off an empty search so that Algolia results reset
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductSearchViewModel>().updateSearchQuery('');
-    });
-    _loadUserClicks();
-    _loadSmartRecommendationByHour();
-    _listenToProducts();
+    _loadSession();
   }
 
-  @override
-  void dispose() {
-    _recController.dispose();
-    super.dispose();
+  Future<void> _loadSession() async {
+    // 1) Try online Firebase user
+    final fbUser = FirebaseAuth.instance.currentUser;
+    if (fbUser != null) {
+      _session = UserSessionModel(
+        uid: fbUser.uid,
+        email: fbUser.email ?? '',
+        name: fbUser.displayName ?? '',
+        isLoggedIn: true,
+      );
+    } else {
+      // 2) Fallback to local storage
+      _session = await LocalStorageService().readSession();
+    }
+
+    // 3) Set state and then trigger the rest of initialization
+    setState(() {
+      _userId = _session?.uid;
+      _loadingSession = false;
+    });
+
+    if (_userId != null) {
+      // Only after session is loaded, start your other logic:
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<ProductSearchViewModel>().updateSearchQuery('');
+      });
+      _loadUserClicks();
+      _loadSmartRecommendationByHour();
+      _listenToProducts();
+    }
   }
 
   Future<void> _listenToProducts() async {
@@ -63,12 +92,11 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadUserClicks() async {
     final doc = await FirebaseFirestore.instance
         .collection('users')
-        .doc(userId)
+        .doc(_userId!)
         .get();
     if (doc.exists) {
       setState(() {
-        _categoryClicks =
-        Map<String, int>.from(doc.data()?['categoryClicks'] ?? {});
+        _categoryClicks = Map<String, int>.from(doc.data()?['categoryClicks'] ?? {});
       });
     }
   }
@@ -83,7 +111,8 @@ class _HomePageState extends State<HomePage> {
     if (!snap.exists) return;
     final cats = Map<String, dynamic>.from(snap.data()?['categories'] ?? {});
     if (cats.isEmpty) return;
-    final sorted = cats.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = cats.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     setState(() => _smartRecommendedCategory = sorted.first.key);
   }
 
@@ -129,7 +158,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _categoryClicks[cat] = (_categoryClicks[cat] ?? 0) + 1);
     await FirebaseFirestore.instance
         .collection('users')
-        .doc(userId)
+        .doc(_userId!)
         .set({
       'categoryClicks': {cat: FieldValue.increment(1)}
     }, SetOptions(merge: true));
@@ -142,32 +171,25 @@ class _HomePageState extends State<HomePage> {
     return sorted;
   }
 
-  List<Product> _filterProducts(
-      List<Product> base, ProductSearchViewModel vm) {
+  List<Product> _filterProducts(List<Product> base, ProductSearchViewModel vm) {
     final query = vm.searchQuery;
-    final List<Product> source =
-    query.isNotEmpty ? vm.searchResults : base;
-    // exclude own products
-    final visible = source.where((p) => p.userId != userId).toList();
-    // category filter
+    final List<Product> source = query.isNotEmpty ? vm.searchResults : base;
+    final visible = source.where((p) => p.userId != _userId).toList();
     final filtered = _selectedCategories.isEmpty
         ? visible
         : visible.where((p) {
       final lc = p.category.toLowerCase();
-      return _selectedCategories.any((sel) =>
-          lc.contains(sel.toLowerCase()));
+      return _selectedCategories.any((sel) => lc.contains(sel.toLowerCase()));
     }).toList();
-    // sort by date
+
     filtered.sort((a, b) {
       final ta = a.timestamp, tb = b.timestamp;
       if (ta == null && tb == null) return 0;
       if (ta == null) return 1;
       if (tb == null) return -1;
-      return _sortOrder == 'Newest first'
-          ? tb.compareTo(ta)
-          : ta.compareTo(tb);
+      return _sortOrder == 'Newest first' ? tb.compareTo(ta) : ta.compareTo(tb);
     });
-    // sort by price
+
     if (_sortPrice != null) {
       filtered.sort((a, b) => _sortPrice == 'Price: Low to High'
           ? a.price.compareTo(b.price)
@@ -178,19 +200,30 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final searchVM = context.watch<ProductSearchViewModel>();
+    // 1) While loading session
+    if (_loadingSession) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    // 2) If no session
+    if (_userId == null) {
+      return const Scaffold(
+        body: Center(child: Text('Por favor, inicia sesión')),
+      );
+    }
 
+    // 3) Build main UI with _userId
+    final searchVM = context.watch<ProductSearchViewModel>();
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              // ── Search + Cart row ──
               Row(
                 children: [
                   Expanded(
@@ -204,32 +237,25 @@ class _HomePageState extends State<HomePage> {
                     icon: const Icon(Icons.shopping_cart_outlined),
                     color: constants.AppColors.secondary30,
                     iconSize: 28,
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/cart'),
+                    onPressed: () => Navigator.pushNamed(context, '/cart'),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              // ── Filter bar ──
               FilterBar(
                 categories: _categoriesSortedByClicks,
                 selectedCategories: _selectedCategories,
-                onCategoriesSelected: (sel) =>
-                    setState(() => _selectedCategories = sel),
-                onSortByDateSelected: (o) =>
-                    setState(() => _sortOrder = o),
-                onSortByPriceSelected: (o) =>
-                    setState(() => _sortPrice = o),
+                onCategoriesSelected: (sel) => setState(() => _selectedCategories = sel),
+                onSortByDateSelected: (o) => setState(() => _sortOrder = o),
+                onSortByPriceSelected: (o) => setState(() => _sortPrice = o),
                 onAcademicCalendarSelected: (b) =>
                     setState(() => _academicCalendarActive = b),
               ),
               const SizedBox(height: 16),
-              // ── Recommended carousel ──
               if (_smartRecommendedCategory != null &&
                   _selectedCategories.isEmpty &&
                   _allProducts != null)
                 _buildSmartRecommendationSection(),
-              // ── Main grid ──
               if (_allProducts == null)
                 const Center(child: CircularProgressIndicator())
               else
@@ -238,19 +264,20 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBarApp(
-        selectedIndex: _selectedIndex,
-      ),
+      bottomNavigationBar: NavigationBarApp(selectedIndex: _selectedIndex),
     );
   }
 
-  Widget _buildSmartRecommendationSection() {
+// ... (rest of your helper widgets unchanged) ...
+
+
+Widget _buildSmartRecommendationSection() {
     final recs = _allProducts!
         .where((p) =>
     p.category.toLowerCase() ==
         _smartRecommendedCategory!
             .toLowerCase() &&
-        p.userId != userId)
+        p.userId != _userId)
         .toList();
     if (recs.isEmpty) return const SizedBox.shrink();
 

@@ -57,10 +57,12 @@ import 'package:senemarket/presentation/views/chat/chat_list_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_page.dart';
 
 import 'data/datasources/product_remote_data_source.dart';
+import 'data/local/database/services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
 
   // Notificaciones y FCM
   final notificationService = NotificationService();
@@ -74,8 +76,9 @@ void main() async {
   Hive.registerAdapter(DraftProductAdapter());
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
+  await Hive.openBox<String>('user_credentials');
 
-  runApp(const SenemarketApp());
+    runApp(const SenemarketApp());
 }
 
 class SenemarketApp extends StatefulWidget {
@@ -166,9 +169,17 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         Provider<ConnectivityService>(create: (_) => connectivityService),
         Provider<NotificationService>(create: (_) => _notificationService),
 
+        Provider<SyncService>(create: (_) => SyncService()),
+
         // ViewModels
         ChangeNotifierProvider(create: (_) => ChatListViewModel()),
-        ChangeNotifierProvider(create: (ctx) => SignInViewModel(ctx.read<AuthRepository>())),
+        ChangeNotifierProvider<SignInViewModel>(
+          create: (ctx) => SignInViewModel(
+            ctx.read<AuthRepository>(),            // 1) AuthRepository
+            ctx.read<ConnectivityService>(),       // 2) ConnectivityService
+            ctx.read<SyncService>(),               // 3) SyncService
+          ),
+        ),
         ChangeNotifierProvider(create: (ctx) => SignUpViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => ProductSearchViewModel(ctx.read<ProductRepository>())),
         ChangeNotifierProvider(

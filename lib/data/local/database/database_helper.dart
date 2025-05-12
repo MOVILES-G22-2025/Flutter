@@ -44,6 +44,19 @@ class DatabaseHelper {
       );
     ''');
 
+
+    // Crear tabla de usuarios
+    await db.execute('''
+          CREATE TABLE users (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            career TEXT,
+            semester TEXT,
+            email TEXT
+          );
+        ''');
+
+
     // Queue for offline-created products
     await db.execute('''
       CREATE TABLE pending_products (
@@ -77,6 +90,17 @@ class DatabaseHelper {
         ADD COLUMN favoritedBy TEXT DEFAULT '[]';
       ''');
     }
+
+    await db.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+              id TEXT PRIMARY KEY,
+              name TEXT,
+              career TEXT,
+              semester TEXT,
+              email TEXT
+            );
+          ''');
+
   }
 
   /// Cierra la base de datos

@@ -1,32 +1,81 @@
-import 'package:flutter/cupertino.dart';
-import '../../../../domain/repositories/auth_repository.dart';
-import '../../../../data/local/database/services/sync_service.dart';  // Asegúrate de importar SyncService
+import '../../../../utils/crypto_utils.dart';              // hashPassword
+import 'package:senemarket/data/local/credential_hive_service.dart'; // CredentialHiveService
+import 'package:senemarket/core/services/connectivity_service.dart';   // ConnectivityService
 
-/// ViewModel that manages sign-in logic and state for the UI.
-/// Delegates authentication to the AuthRepository.
+import 'package:flutter/foundation.dart'; // para ChangeNotifier & kDebugMode
+import 'package:senemarket/domain/repositories/auth_repository.dart'; // AuthRepository
+import 'package:senemarket/data/local/database/services/sync_service.dart'; // SyncService
+
+
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';                // para FirebaseAuth.instance.currentUser
+              // hashPassword
+import 'package:senemarket/data/local/services/local_storage_service.dart';
+import 'package:senemarket/data/local/models/user_session.dart';
+
 class SignInViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
-  final SyncService _syncService = SyncService(); // Instancia SyncService
+  final ConnectivityService _connectivityService;
+  final SyncService _syncService;
+  final CredentialHiveService _credentialService;
+  final LocalStorageService _localStorage;
 
   bool isLoading = false;
   String errorMessage = '';
 
-  SignInViewModel(this._authRepository);
+  SignInViewModel(
+      this._authRepository,
+      this._connectivityService,
+      this._syncService,
+      )   : _credentialService = CredentialHiveService(),
+        _localStorage    = LocalStorageService();
 
-  /// Tries to sign in with email and password.
-  /// Shows loading and error state to the UI.
   Future<void> signIn(String email, String password) async {
     isLoading = true;
     errorMessage = '';
     notifyListeners();
 
-    final error = await _authRepository.signInWithEmailAndPassword(email, password);
+    final passwordHash = hashPassword(password);
 
-    if (error != null) {
-      errorMessage = error;
+    if (await _connectivityService.isOnline) {
+      // —— LOGIN ONLINE ——
+      final error = await _authRepository.signInWithEmailAndPassword(email, password);
+      if (error != null) {
+        errorMessage = error;
+      } else {
+        // Guardar hash para login offline
+        await _credentialService.saveCredentials(email, passwordHash);
+
+        // Sincronizar usuario remoto
+        await _syncService.sincronizarUsuarioPorEmail(email);
+
+        // ** Guardar sesión activa localmente **
+        final fbUser = FirebaseAuth.instance.currentUser!;
+        final session = UserSessionModel(
+          uid: fbUser.uid,
+          email: fbUser.email!,
+          name: fbUser.displayName ?? '',
+          isLoggedIn: true,
+        );
+        await _localStorage.saveActiveSession(session);
+      }
     } else {
-      // Si el inicio de sesión fue exitoso, sincronizamos el usuario
-      await _syncService.sincronizarUsuarioPorEmail(email); // Sincronizamos el usuario por su email
+      // —— LOGIN OFFLINE ——
+      final storedHash = _credentialService.getStoredHash(email);
+      if (storedHash == null) {
+        errorMessage = 'No hay credenciales guardadas para $email';
+      } else if (storedHash == passwordHash) {
+        // Éxito offline: guardamos la sesión local
+        final session = UserSessionModel(
+          uid: email,                    // usa email como UID si no tienes otro
+          email: email,
+          name: email.split('@').first,  // o el nombre que prefieras
+          isLoggedIn: true,
+        );
+        await _localStorage.saveActiveSession(session);
+      } else {
+        errorMessage = 'Contraseña incorrecta (offline)';
+      }
     }
 
     isLoading = false;
