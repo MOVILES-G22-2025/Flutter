@@ -2,8 +2,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+// Widget that shows a banner when the device is offline
 class OfflineBanner extends StatefulWidget {
-  /// Stream que emite `true` cuando hay conexión, `false` cuando NO.
+  /// Stream that emits `true` when online, `false` when offline
   final Stream<bool> connectivityStream;
 
   const OfflineBanner({Key? key, required this.connectivityStream})
@@ -14,7 +15,8 @@ class OfflineBanner extends StatefulWidget {
 }
 
 class _OfflineBannerState extends State<OfflineBanner> {
-  int _status = 0; // 0=none, 1=offline, 2=back online
+  // Status: 0=none, 1=offline, 2=back online
+  int _status = 0;
   late StreamSubscription<bool> _sub;
 
   @override
@@ -44,12 +46,9 @@ class _OfflineBannerState extends State<OfflineBanner> {
 
     final isOffline = _status == 1;
     final bgColor = isOffline
-        ? Colors.redAccent.withOpacity(0.9)
-        : Colors.green.withOpacity(0.9);
+        ? Colors.redAccent.withOpacity(0.95)
+        : Colors.green.withOpacity(0.95);
     final icon = isOffline ? Icons.cloud_off : Icons.cloud_queue;
-
-    // Obtener alto de status bar para no sobreponer dos SafeAreas
-    final top = MediaQuery.of(context).padding.top;
 
     return GestureDetector(
       onTap: () {
@@ -65,11 +64,19 @@ class _OfflineBannerState extends State<OfflineBanner> {
           );
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+      child: Container(
         width: double.infinity,
-        padding: EdgeInsets.only(top: top + 4, bottom: 4),
-        color: bgColor,
+        height: 32,
+        decoration: BoxDecoration(
+          color: bgColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Center(
           child: Icon(icon, size: 20, color: Colors.white),
         ),

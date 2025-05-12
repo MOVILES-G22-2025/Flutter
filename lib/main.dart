@@ -60,6 +60,7 @@ import 'package:senemarket/presentation/views/chat/chat_page.dart';
 
 import 'data/datasources/product_remote_data_source.dart';
 import 'package:senemarket/data/local/models/cart_item.dart';
+import 'package:senemarket/core/widgets/app_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -196,6 +197,9 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           scaffoldBackgroundColor: constants.AppColors.primary30,
           colorScheme: ColorScheme.fromSeed(seedColor: constants.AppColors.primary30),
         ),
+        builder: (context, child) {
+          return AppWrapper(child: child!);
+        },
         routes: {
           '/splash': (_) => const SplashScreen(),
           '/login': (_) => const LoginPage(),

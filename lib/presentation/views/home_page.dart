@@ -218,7 +218,30 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              // ── Offline search message ──
+              StreamBuilder<bool>(
+                stream: _productRepo.connectivity.isOnline$,
+                initialData: true,
+                builder: (context, snapshot) {
+                  final isOnline = snapshot.data ?? true;
+                  if (!isOnline && searchVM.searchQuery.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Searching in saved products',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 8),
               // ── Filter bar ──
               FilterBar(
                 categories: _categoriesSortedByClicks,
