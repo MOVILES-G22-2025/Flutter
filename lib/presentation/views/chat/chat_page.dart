@@ -40,13 +40,39 @@ class _ChatPageState extends State<ChatPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Send this image?'),
+        icon: const Text(
+            "Are you sure you want to send this image?",
+            style: TextStyle(
+              fontFamily: 'Cabin',
+              fontSize: 14,
+              color: Colors.black,
+            ),
+          ),
         content: Image.file(file, width: 200, height: 200, fit: BoxFit.cover),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Send')),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  fontFamily: 'Cabin',
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                "Send",
+                style: TextStyle(
+                  fontFamily: 'Cabin',
+                  color: AppColors.primary30,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
     );
     if (confirm == true) await context.read<ChatViewModel>().sendImage(file);
   }
