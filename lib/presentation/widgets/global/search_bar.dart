@@ -58,7 +58,7 @@ class _SearchBarState extends State<SearchBar> {
       decoration: InputDecoration(
         hintText: widget.hintText,
         filled: _isFocused,
-        fillColor: _isFocused ? AppColors.primary20 : Colors.transparent,
+        fillColor: _isFocused ? AppColors.primary30 : Colors.transparent,
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.grey),
           borderRadius: BorderRadius.circular(30.0),

@@ -207,6 +207,10 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/signIn': (_) => const SignInPage(),
           '/signUp': (_) => const SignUpPage(),
           '/home': (_) => const HomePage(),
+          '/cart': (_) => ChangeNotifierProvider(
+            create: (_) => CartViewModel(),
+            child: const CartPage(),
+          ),
           '/add_product': (_) => const AddProductPage(),
           '/my_products': (_) => const MyProductsPage(),
           '/favorites': (_) => const FavoritesPage(),

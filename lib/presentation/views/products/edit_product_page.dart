@@ -58,7 +58,7 @@ class _EditProductPageState extends State<EditProductPage> {
   // Pick image from gallery or camera
   Future<void> _pickImage(ImageSource source) async {
     if (_existingImages.length + _newImages.length >= 5) {
-      _showSnackBar("Max 5 images allowed");
+      _showSnackBar("Maximum 5 images allowed");
       return;
     }
 
@@ -159,7 +159,7 @@ class _EditProductPageState extends State<EditProductPage> {
         backgroundColor: constants.AppColors.primary50,
         elevation: 0,
         iconTheme: const IconThemeData(color: constants.AppColors.primary0),
-        title: const Text('Edit Product', style: TextStyle(
+        title: const Text('Edit product', style: TextStyle(
           fontFamily: 'Cabin',
           fontSize: 24,
           fontWeight: FontWeight.bold,
@@ -322,7 +322,7 @@ class _EditProductPageState extends State<EditProductPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: constants.AppColors.primary30,
 
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 14),
               ),
               child: viewModel.isLoading
                   ? const CircularProgressIndicator()

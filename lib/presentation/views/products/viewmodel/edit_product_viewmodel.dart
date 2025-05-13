@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:isolate';
+
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/domain/entities/product.dart';
@@ -25,41 +26,65 @@ class EditProductViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    try {
-      await _productRepository.updateProduct(
-        productId: productId,
-        updatedProduct: updatedProduct,
-        newImages: newImages,
-        imagesToDelete: imagesToDelete,
-      );
-      isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
+    bool result = false;
+
+    await _productRepository.updateProduct(
+      productId: productId, 
+      updatedProduct: updatedProduct,
+      newImages: newImages,
+      imagesToDelete: imagesToDelete,
+    ).then((_) {
+      result = true;
+    }).catchError((e) {
       errorMessage = e.toString();
-      isLoading = false;
-      notifyListeners();
-      return false;
-    }
+      result = false;
+    });
+
+    isLoading = false;
+    notifyListeners();
+    return result;
   }
 
   //Isolate strategy
   Future<void> clearEditedImagesFromCache(List<String> oldUrls, List<String> updatedUrls) async {
-    await compute(_clearImagesWorker, {
-      'oldUrls': oldUrls,
-      'updatedUrls': updatedUrls,
-    });
+    final receivePort = ReceivePort();
+
+    await Isolate.spawn<_ImageCleanupPayload>(
+      _clearImagesWorker,
+      _ImageCleanupPayload(
+        oldUrls: oldUrls,
+        updatedUrls: updatedUrls,
+        sendPort: receivePort.sendPort,
+      ),
+    );
+
+    await receivePort.first; //Esperar confirmación
+    receivePort.close();
   }
+}
 
-  void _clearImagesWorker(Map<String, dynamic> args) async {
-    final oldUrls = List<String>.from(args['oldUrls']);
-    final updatedUrls = List<String>.from(args['updatedUrls']);
-    final manager = CustomCacheManager.instance;
+//Payload para pasar a la función aislada
+class _ImageCleanupPayload {
+  final List<String> oldUrls;
+  final List<String> updatedUrls;
+  final SendPort sendPort;
 
-    for (final url in oldUrls) {
-      if (!updatedUrls.contains(url)) {
-        await manager.removeFile(url);
-      }
+  _ImageCleanupPayload({
+    required this.oldUrls,
+    required this.updatedUrls,
+    required this.sendPort,
+  });
+}
+
+//Función ejecutada en el Isolate
+void _clearImagesWorker(_ImageCleanupPayload payload) async {
+  final manager = CustomCacheManager.instance;
+
+  for (final url in payload.oldUrls) {
+    if (!payload.updatedUrls.contains(url)) {
+      await manager.removeFile(url);
     }
   }
+  //Notifica que terminó
+  payload.sendPort.send(true);
 }

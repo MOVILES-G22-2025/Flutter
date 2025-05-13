@@ -49,7 +49,7 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
             style: TextStyle(
               fontFamily: 'Cabin',
               fontWeight: FontWeight.bold,
-              fontSize: 22,
+              fontSize: 24,
               color: Colors.black,
             )),
         centerTitle: true,
@@ -61,7 +61,7 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
       body: drafts.isEmpty
           ? const Center(
         child: Text(
-          'No drafts available.',
+          'No drafts available',
           style: TextStyle(
             fontFamily: 'Cabin',
             fontSize: 18,
@@ -92,13 +92,45 @@ class _MyDraftsPageState extends State<MyDraftsPage> {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
-                  title: const Text("Delete Draft"),
-                  content: const Text("Are you sure you want to delete this draft?"),
-                  actions: [
-                    TextButton(child: const Text("Cancel"), onPressed: () => Navigator.pop(context, false)),
-                    TextButton(child: const Text("Delete"), onPressed: () => Navigator.pop(context, true)),
-                  ],
+                  title: const Text(
+                  "Delete draft",
+                  style: TextStyle(
+                    fontFamily: 'Cabin',
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
+                content: const Text(
+                  "Are you sure you want to delete this draft?",
+                  style: TextStyle(
+                    fontFamily: 'Cabin',
+                    color: Colors.black87,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text(
+                      "Cancel",
+                      style: TextStyle(
+                        fontFamily: 'Cabin',
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text(
+                      "Delete",
+                      style: TextStyle(
+                        fontFamily: 'Cabin',
+                        color: AppColors.primary30,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               );
 
               if (confirm == true) {

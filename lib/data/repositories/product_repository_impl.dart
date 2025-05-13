@@ -43,7 +43,7 @@ class ProductRepositoryImpl implements ProductRepository {
   })  : _auth = auth ?? FirebaseAuth.instance,
         _remote = remoteDataSource ?? ProductRemoteDataSource(),
         _algolia = algolia ??
-            Algolia.init(
+            const Algolia.init(
               applicationId: 'AAJ6U9G25X',
               apiKey: 'e1450d2b94d56f3a2bf7a7978f255be1',
             ),
@@ -52,7 +52,7 @@ class ProductRepositoryImpl implements ProductRepository {
         _connectivity = connectivityService ?? ConnectivityService(),
         _db = databaseHelper ?? DatabaseHelper();
 
-  /// 1️⃣ Búsqueda de productos en Algolia
+  ///Búsqueda de productos en Algolia
   @override
   Future<List<Product>> searchProducts(String query) async {
     final online = await _connectivity.isOnline$.first;
@@ -114,7 +114,7 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
-  /// 2️⃣ Crear producto: online → Firestore, offline → pending_products
+  ///Crear producto: online → Firestore, offline → pending_products
   @override
   Future<void> addProduct({
     required List<XFile?> images,
@@ -160,7 +160,7 @@ class ProductRepositoryImpl implements ProductRepository {
     await _remote.saveProduct(user.uid, dto);
   }
 
-  /// 3️⃣ Stream de productos: Firestore → cache local + dominio
+  /// Stream de productos: Firestore → cache local + dominio
   @override
   Stream<List<Product>> getProductsStream() {
     return _remote.getProductDTOStream().map((dtoList) async {
@@ -200,7 +200,7 @@ class ProductRepositoryImpl implements ProductRepository {
     }).asyncMap((future) => future);
   }
 
-  /// 4️⃣ Favoritos (y encola si está offline)
+  /// Favoritos (y encola si está offline)
   @override
   Future<void> addProductFavorite({
     required String userId,
@@ -296,14 +296,14 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
-  /// 5️⃣ Borradores vía Hive
+  ///Borradores vía Hive
   @override
   Future<void> saveDraftProduct(DraftProduct draft) async {
     final box = await Hive.openBox<DraftProduct>('draft_products');
     await box.put(draft.id, draft);
   }
 
-  /// 6️⃣ Sincroniza los pending_products cuando recuperas conexión
+  ///Sincroniza los pending_products cuando recuperas conexión
   Future<void> syncOfflineProducts() async {
     final pending = await _db.getPendingProducts();
     for (final row in pending) {
