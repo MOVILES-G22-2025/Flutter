@@ -55,9 +55,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _listenToProducts() async {
-    _productRepo.getProductsStream().listen((products) {
-      setState(() => _allProducts = products);
-    });
+    final online = await _productRepo.connectivity.isOnline$.first;
+    
+    if (online) {
+      // Online: usar stream de Firestore
+      _productRepo.getProductsStream().listen((products) {
+        setState(() => _allProducts = products);
+      });
+    } else {
+      // Offline: usar caché local
+      final cachedProducts = await _productRepo.getCachedProducts();
+      setState(() => _allProducts = cachedProducts);
+    }
   }
 
   Future<void> _loadUserClicks() async {
@@ -209,7 +218,30 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              // ── Offline search message ──
+              StreamBuilder<bool>(
+                stream: _productRepo.connectivity.isOnline$,
+                initialData: true,
+                builder: (context, snapshot) {
+                  final isOnline = snapshot.data ?? true;
+                  if (!isOnline && searchVM.searchQuery.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Searching in saved products',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 8),
               // ── Filter bar ──
               FilterBar(
                 categories: _categoriesSortedByClicks,
@@ -254,85 +286,80 @@ class _HomePageState extends State<HomePage> {
         .toList();
     if (recs.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Recommended now',
-              style: TextStyle(
-                fontFamily: 'Cabin',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: constants.AppColors.primary20,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Recommended now',
+                    style: TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: constants.AppColors.primary0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_smartRecommendedCategory!}',
+                    style: TextStyle(
+                      fontFamily: 'Cabin',
+                      fontSize: 14,
+                      color: constants.AppColors.primary0,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            IconButton(
-              icon: Icon(
-                _showRecommended
-                    ? Icons.expand_less
-                    : Icons.expand_more,
+              IconButton(
+                icon: Icon(
+                  _showRecommended ? Icons.expand_less : Icons.expand_more,
+                  color: constants.AppColors.primary0,
+                ),
+                onPressed: () => setState(() => _showRecommended = !_showRecommended),
               ),
-              onPressed: () => setState(
-                      () => _showRecommended = !_showRecommended),
-            ),
-          ],
-        ),
-        if (_showRecommended) ...[
-          SizedBox(
-            height: 220,
-            child: PageView.builder(
-              controller: _recController,
-              itemCount: recs.length,
-              onPageChanged: (i) =>
-                  setState(() => _currentRecPage = i),
+            ],
+          ),
+          if (_showRecommended) ...[
+            const SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: recs.length > 4 ? 4 : recs.length,
               itemBuilder: (ctx, i) {
                 final p = recs[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 5.0),
-                  child: GestureDetector(
-                    onTap: () => _registerProductClick(p),
-                    child: ProductCard(
-                      product: p,
-                      onCategoryTap: _incrementCategoryClick,
-                      onProductTap: () =>
-                          _registerProductClick(p), originIndex: 0,
-                    ),
+                return GestureDetector(
+                  onTap: () => _registerProductClick(p),
+                  child: ProductCard(
+                    product: p,
+                    onCategoryTap: _incrementCategoryClick,
+                    onProductTap: () => _registerProductClick(p),
+                    originIndex: 0,
                   ),
                 );
               },
             ),
-          ),
-          const SizedBox(height: 8),
-          // Dots indicator
-          Row(
-            mainAxisAlignment:
-            MainAxisAlignment.center,
-            children: List.generate(
-              recs.length,
-                  (i) => AnimatedContainer(
-                duration:
-                const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(
-                    horizontal: 4),
-                width: _currentRecPage == i ? 12 : 8,
-                height: _currentRecPage == i ? 12 : 8,
-                decoration: BoxDecoration(
-                  color: _currentRecPage == i
-                      ? constants
-                      .AppColors.primary30
-                      : Colors.grey[400],
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
+          ],
         ],
-      ],
+      ),
     );
   }
 
