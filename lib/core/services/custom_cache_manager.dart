@@ -1,12 +1,14 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+// Custom cache manager for handling product images
 class CustomCacheManager {
+  // Singleton instance of the cache manager
   static final BaseCacheManager instance = CacheManager(
     Config(
       'customProductCache',
-      //Tiempo antes de considerar un archivo como obsoleto
+      // Time before considering a file as stale
       stalePeriod: const Duration(days: 30),
-      //Número máximo de objetos en caché
+      // Maximum number of objects to store in cache
       maxNrOfCacheObjects: 100,
     ),
   );

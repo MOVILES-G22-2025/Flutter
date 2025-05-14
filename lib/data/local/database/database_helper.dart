@@ -179,7 +179,11 @@ class DatabaseHelper {
     await db.delete('cached_products', where: 'id = ?', whereArgs: [id]);
   }
 
-
+  /// Limpia todos los productos de la caché
+  Future<void> clearCachedProducts() async {
+    final db = await database;
+    await db.delete('cached_products');
+  }
 
   Future<List<Map<String, dynamic>>> getCachedFavorites(String userId) async {
     final db = await database;

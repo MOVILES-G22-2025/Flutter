@@ -81,11 +81,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primary0),
         centerTitle: true,
-        title: Row(
+        title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 8),
-            const Text(
+            SizedBox(width: 8),
+            Text(
               'Favorites',
               style: TextStyle(
                 fontFamily: 'Cabin',
@@ -94,7 +94,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 color: AppColors.primary0,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
           ],
         ),
       ),
@@ -160,7 +160,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 ? _buildEmptyState()
                 : _isGrid
                 ? _buildGrid(filtered)
-                : _buildList(filtered), // <-- ahora lista
+                : _buildList(filtered),
           ),
         ],
       ),
@@ -193,7 +193,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Explore products'),
+            child: const Text('Explore products',
+                style: TextStyle(
+              fontFamily: 'Cabin',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            )),
           ),
         ],
       ),

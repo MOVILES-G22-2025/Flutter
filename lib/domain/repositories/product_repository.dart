@@ -46,4 +46,6 @@ abstract class ProductRepository {
 
   fetchProductClickCount(String productId) {}
 
+  /// Obtiene los productos de la caché local
+  Future<List<Product>> getCachedProducts();
 }

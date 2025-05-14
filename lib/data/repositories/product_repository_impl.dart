@@ -43,7 +43,7 @@ class ProductRepositoryImpl implements ProductRepository {
   })  : _auth = auth ?? FirebaseAuth.instance,
         _remote = remoteDataSource ?? ProductRemoteDataSource(),
         _algolia = algolia ??
-            Algolia.init(
+            const Algolia.init(
               applicationId: 'AAJ6U9G25X',
               apiKey: 'e1450d2b94d56f3a2bf7a7978f255be1',
             ),
@@ -52,19 +52,69 @@ class ProductRepositoryImpl implements ProductRepository {
         _connectivity = connectivityService ?? ConnectivityService(),
         _db = databaseHelper ?? DatabaseHelper();
 
-  /// 1️⃣ Búsqueda de productos en Algolia
+  ///Búsqueda de productos en Algolia
   @override
   Future<List<Product>> searchProducts(String query) async {
-    final snap = await _algolia.instance
-        .index('senemarket_products_index')
-        .query(query)
-        .getObjects();
-    return snap.hits
-        .map((h) => ProductDTO.fromAlgoliaHit(h).toDomain())
-        .toList();
+    final online = await _connectivity.isOnline$.first;
+    
+    if (online) {
+      // Online: usar Algolia y guardar en caché
+      final snap = await _algolia.instance
+          .index('senemarket_products_index')
+          .query(query)
+          .getObjects();
+      
+      final products = snap.hits
+          .map((h) => ProductDTO.fromAlgoliaHit(h).toDomain())
+          .toList();
+      
+      // Guardar en caché local
+      for (final product in products) {
+        final dto = ProductDTO.fromDomain(product);
+        final map = dto.toFirestore()
+          ..['id'] = dto.id
+          ..['imageUrls'] = dto.imageUrls.join(',')
+          ..['favoritedBy'] = jsonEncode(dto.favoritedBy)
+          ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
+        await _db.upsertCachedProduct(map);
+      }
+      
+      return products;
+    } else {
+      // Offline: buscar en caché local
+      final cachedProducts = await _db.getCachedProducts();
+      return cachedProducts
+          .where((product) {
+            final name = (product['name'] as String).toLowerCase();
+            final description = (product['description'] as String).toLowerCase();
+            final searchLower = query.toLowerCase();
+            return name.contains(searchLower) || description.contains(searchLower);
+          })
+          .map((product) {
+            final urls = (product['imageUrls'] as String).split(',');
+            final favoritedBy = (jsonDecode(product['favoritedBy'] as String) as List).cast<String>();
+            final timestamp = product['timestamp'] != null 
+                ? DateTime.fromMillisecondsSinceEpoch(product['timestamp'] as int)
+                : null;
+            
+            return Product(
+              id: product['id'] as String,
+              name: product['name'] as String,
+              description: product['description'] as String,
+              category: product['category'] as String,
+              price: product['price'] as double,
+              imageUrls: urls,
+              sellerName: product['sellerName'] as String,
+              favoritedBy: favoritedBy,
+              timestamp: timestamp,
+              userId: product['userId'] as String,
+            );
+          })
+          .toList();
+    }
   }
 
-  /// 2️⃣ Crear producto: online → Firestore, offline → pending_products
+  ///Crear producto: online → Firestore, offline → pending_products
   @override
   Future<void> addProduct({
     required List<XFile?> images,
@@ -110,23 +160,47 @@ class ProductRepositoryImpl implements ProductRepository {
     await _remote.saveProduct(user.uid, dto);
   }
 
-  /// 3️⃣ Stream de productos: Firestore → cache local + dominio
+  /// Stream de productos: Firestore → cache local + dominio
   @override
   Stream<List<Product>> getProductsStream() {
-    return _remote.getProductDTOStream().map((dtoList) {
-      for (final dto in dtoList) {
-        // Preparamos el map para cached_products:
+    return _remote.getProductDTOStream().map((dtoList) async {
+      // 1. Obtener productos favoritos actuales
+      final userId = _auth.currentUser?.uid;
+      final favoriteProducts = userId != null 
+          ? await _db.getCachedFavorites(userId)
+          : <Map<String, dynamic>>[];
+      final favoriteIds = favoriteProducts.map((p) => p['id'] as String).toSet();
+
+      // 2. Filtrar productos que no son del usuario actual
+      final otherUsersProducts = dtoList.where((dto) => dto.userId != userId).toList();
+      
+      // 3. Preparar los nuevos productos para la caché
+      final productsToCache = otherUsersProducts.take(40).toList(); // Tomar solo los 40 más recientes
+      
+      // 4. Agregar productos favoritos que no estén en los 40 más recientes
+      for (final dto in otherUsersProducts) {
+        if (favoriteIds.contains(dto.id) && 
+            !productsToCache.any((p) => p.id == dto.id)) {
+          productsToCache.add(dto);
+        }
+      }
+
+      // 5. Limpiar caché y guardar nuevos productos
+      await _db.clearCachedProducts();
+      for (final dto in productsToCache) {
         final map = dto.toFirestore()
           ..['id'] = dto.id
           ..['imageUrls'] = dto.imageUrls.join(',')
+          ..['favoritedBy'] = jsonEncode(dto.favoritedBy)
           ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
-        _db.upsertCachedProduct(map);
+        await _db.upsertCachedProduct(map);
       }
+
       return dtoList.map((dto) => dto.toDomain()).toList();
-    });
+    }).asyncMap((future) => future);
   }
 
-  /// 4️⃣ Favoritos (y encola si está offline)
+  /// Favoritos (y encola si está offline)
   @override
   Future<void> addProductFavorite({
     required String userId,
@@ -222,14 +296,14 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
-  /// 5️⃣ Borradores vía Hive
+  ///Borradores vía Hive
   @override
   Future<void> saveDraftProduct(DraftProduct draft) async {
     final box = await Hive.openBox<DraftProduct>('draft_products');
     await box.put(draft.id, draft);
   }
 
-  /// 6️⃣ Sincroniza los pending_products cuando recuperas conexión
+  ///Sincroniza los pending_products cuando recuperas conexión
   Future<void> syncOfflineProducts() async {
     final pending = await _db.getPendingProducts();
     for (final row in pending) {
@@ -372,5 +446,31 @@ class ProductRepositoryImpl implements ProductRepository {
     return uid;
   }
 
+  /// Getter para acceder al servicio de conectividad
+  ConnectivityService get connectivity => _connectivity;
 
+  /// Obtiene los productos de la caché local
+  Future<List<Product>> getCachedProducts() async {
+    final cachedProducts = await _db.getCachedProducts();
+    return cachedProducts.map((product) {
+      final urls = (product['imageUrls'] as String).split(',');
+      final favoritedBy = (jsonDecode(product['favoritedBy'] as String) as List).cast<String>();
+      final timestamp = product['timestamp'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(product['timestamp'] as int)
+          : null;
+      
+      return Product(
+        id: product['id'] as String,
+        name: product['name'] as String,
+        description: product['description'] as String,
+        category: product['category'] as String,
+        price: product['price'] as double,
+        imageUrls: urls,
+        sellerName: product['sellerName'] as String,
+        favoritedBy: favoritedBy,
+        timestamp: timestamp,
+        userId: product['userId'] as String,
+      );
+    }).toList();
+  }
 }

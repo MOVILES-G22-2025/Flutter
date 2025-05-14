@@ -31,6 +31,8 @@ import 'package:senemarket/core/services/notification_service.dart';
 import 'package:senemarket/data/local/models/operation.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/data/local/models/draft_product.dart';
+import 'package:senemarket/presentation/views/cart/cart_page.dart';
+import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart';
 
 // ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
@@ -51,12 +53,15 @@ import 'package:senemarket/presentation/views/products/add_product_page.dart';
 import 'package:senemarket/presentation/views/products/my_products_page.dart';
 import 'package:senemarket/presentation/views/favorites/favorite_page.dart';
 import 'package:senemarket/presentation/views/profile/profile_page.dart';
+import 'package:senemarket/presentation/views/profile/edit_profile_page.dart';
 import 'package:senemarket/presentation/views/drafts/edit_draft_page.dart';
 import 'package:senemarket/presentation/views/drafts/my_drafts_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_list_page.dart';
 import 'package:senemarket/presentation/views/chat/chat_page.dart';
 
 import 'data/datasources/product_remote_data_source.dart';
+import 'package:senemarket/data/local/models/cart_item.dart';
+import 'package:senemarket/core/widgets/app_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,8 +77,10 @@ void main() async {
   Hive.registerAdapter(OperationAdapter());
   Hive.registerAdapter(OperationTypeAdapter());
   Hive.registerAdapter(DraftProductAdapter());
+  Hive.registerAdapter(CartItemAdapter());
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
+  await Hive.openBox<CartItem>('cart');
 
   runApp(const SenemarketApp());
 }
@@ -171,6 +178,8 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
         ChangeNotifierProvider(create: (ctx) => SignInViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => SignUpViewModel(ctx.read<AuthRepository>())),
         ChangeNotifierProvider(create: (ctx) => ProductSearchViewModel(ctx.read<ProductRepository>())),
+        ChangeNotifierProvider(create: (ctx) => CartViewModel()),
+
         ChangeNotifierProvider(
           create: (ctx) => AddProductViewModel(
             ctx.read<ProductRepository>(),
@@ -189,16 +198,25 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           scaffoldBackgroundColor: constants.AppColors.primary30,
           colorScheme: ColorScheme.fromSeed(seedColor: constants.AppColors.primary30),
         ),
+        builder: (context, child) {
+          return AppWrapper(child: child!);
+        },
         routes: {
           '/splash': (_) => const SplashScreen(),
           '/login': (_) => const LoginPage(),
           '/signIn': (_) => const SignInPage(),
           '/signUp': (_) => const SignUpPage(),
           '/home': (_) => const HomePage(),
+          '/cart': (_) => ChangeNotifierProvider(
+            create: (_) => CartViewModel(),
+            child: const CartPage(),
+          ),
           '/add_product': (_) => const AddProductPage(),
           '/my_products': (_) => const MyProductsPage(),
           '/favorites': (_) => const FavoritesPage(),
           '/profile': (_) => const ProfilePage(),
+          '/edit_profile': (_) => const EditProfilePage(),
+          '/cart': (_) => const CartPage(),
           '/drafts': (_) => const MyDraftsPage(),
           '/edit_draft': (ctx) {
             final args = ModalRoute.of(ctx)!.settings.arguments;
