@@ -31,6 +31,9 @@ class UserRemoteDataSource {
       'email': email,
       'favorites': [],
     });
+
+    //Registrar el evento de creacion de cuenta
+    await logUserEvent(uid, 'signup');
   }
 
   /// Updates user data with merge option to preserve existing fields.
@@ -52,5 +55,20 @@ class UserRemoteDataSource {
           ? FieldValue.arrayUnion([productId])
           : FieldValue.arrayRemove([productId])
     }, SetOptions(merge: true));
+  }
+
+  //Funcion para registrar eventos
+  Future<void> logUserEvent(String uid, String event) async {
+    if (uid.isEmpty) return;
+
+    try {
+      await _firestore.collection('user-logs').add({
+        'uid': uid,
+        'event': event,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error logging user event: $e');
+    }
   }
 }
