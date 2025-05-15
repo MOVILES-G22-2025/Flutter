@@ -16,6 +16,7 @@ class UserRepository {
       'career'   : data['career'],
       'semester' : data['semester'],
       'email'    : data['email'],
+      'profileImageUrl' : data['profileImageUrl'],
     };
   }
 

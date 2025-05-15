@@ -1,12 +1,15 @@
 // lib/presentation/views/profile/edit_profile_page.dart
 
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/widgets/form_fields/custom_field.dart';
@@ -67,27 +70,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     setState(() => _isUploadingImage = true);
     try {
-      final storageRef =
-      FirebaseStorage.instance.ref('profile_images/$_userId.jpg');
-      await storageRef.putFile(File(picked.path));
-      final downloadUrl = await storageRef.getDownloadURL();
+      // 1) Copiar localmente
+      final appDir = await getApplicationDocumentsDirectory();
+      final localPath = p.join(appDir.path, 'profile_$_userId.jpg');
+      await File(picked.path).copy(localPath);
+      String urlForDb = localPath;
 
-      // Actualiza Firestore y caché local
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_userId)
-          .update({'profileImageUrl': downloadUrl});
+      // 2) Si hay internet, subir a Storage y usar URL remota
+      final status = await Connectivity().checkConnectivity();
+      if (status != ConnectivityResult.none) {
+        final storageRef = FirebaseStorage.instance.ref('profile_images/$_userId.jpg');
+        await storageRef.putFile(File(picked.path));
+        urlForDb = await storageRef.getDownloadURL();
+      }
+
+      // 3) Actualizar vía repositorio (cache local y cola offline)
       await _userRepo.updateUserData({
         'name'            : _nameController.text.trim(),
         'career'          : _selectedCareer!,
         'semester'        : _semesterController.text.trim(),
         'email'           : _email,
-        'profileImageUrl' : downloadUrl,
+        'profileImageUrl' : urlForDb,
       });
 
-      setState(() => _profileImageUrl = downloadUrl);
+      // 4) Reflejar en UI
+      setState(() => _profileImageUrl = urlForDb);
     } catch (e) {
-      // Puedes mostrar un Snackbar o ErrorText
+      // Manejo de error opcional
     } finally {
       setState(() => _isUploadingImage = false);
     }
@@ -106,17 +115,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     // — Validaciones —
     if (name.isEmpty) {
-      setState(() {
-        _nameError = ErrorMessages.allFieldsRequired;
-        _isLoading = false;
-      });
+      setState(() { _nameError = ErrorMessages.allFieldsRequired; _isLoading = false; });
       return;
     }
     if (name.length > 40) {
-      setState(() {
-        _nameError = ErrorMessages.maxChar;
-        _isLoading = false;
-      });
+      setState(() { _nameError = ErrorMessages.maxChar; _isLoading = false; });
       return;
     }
     if (career == null || career.isEmpty) {
@@ -125,24 +128,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
     final intSem = int.tryParse(semester);
     if (intSem == null || intSem < 1 || intSem > 20) {
-      setState(() {
-        _semesterError = ErrorMessages.semesterRange;
-        _isLoading     = false;
-      });
+      setState(() { _semesterError = ErrorMessages.semesterRange; _isLoading = false; });
       return;
     }
 
     try {
-      // 4️⃣ Llamamos al repositorio unificado
-      await _userRepo.updateUserData({
+      // 4️⃣ Llamamos al repositorio unificado e incluimos imagen actual
+      final payload = {
         'name'     : name,
         'career'   : career,
         'semester' : semester,
         'email'    : _email,
-      });
+      };
+      if (_profileImageUrl != null) {
+        payload['profileImageUrl'] = _profileImageUrl!;
+      }
+      await _userRepo.updateUserData(payload);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      // Maneja el error (Snackbar, ErrorText, etc.)
+      // Manejo de error opcional
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -162,11 +166,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
         title: const Text(
           'Edit Profile',
-          style: TextStyle(
-            fontFamily: 'Cabin',
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontFamily: 'Cabin', fontSize: 20, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary50,
         elevation: 0,
@@ -195,24 +195,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ? const CircularProgressIndicator()
                           : _profileImageUrl != null
                           ? ClipOval(
-                        child: CachedNetworkImage(
+                        child: (_profileImageUrl!.startsWith('http')
+                            ? CachedNetworkImage(
                           imageUrl: _profileImageUrl!,
-                          cacheManager:
-                          CustomCacheManager.instance,
+                          cacheManager: CustomCacheManager.instance,
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,
-                          placeholder: (ctx, url) =>
-                          const CircularProgressIndicator(),
-                          errorWidget: (ctx, url, err) =>
-                          const Icon(Icons.error),
-                        ),
+                          placeholder: (_, __) => const CircularProgressIndicator(),
+                          errorWidget: (_, __, ___) => const Icon(Icons.error),
+                        )
+                            : Image.file(
+                          File(_profileImageUrl!),
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        )),
                       )
-                          : const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
+                          : const Icon(Icons.person, size: 50, color: Colors.grey),
                     ),
                   ),
                   Positioned(
@@ -224,11 +224,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         color: AppColors.primary30,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -256,8 +252,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               label: 'Career',
               items: Careers.careers,
               selectedItem: _selectedCareer,
-              onChanged: (String? value) =>
-                  setState(() => _selectedCareer = value),
+              onChanged: (value) => setState(() => _selectedCareer = value),
             ),
             const SizedBox(height: 16),
 
@@ -269,8 +264,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               onChanged: (value) {
                 final intSem = int.tryParse(value);
                 if (intSem != null && (intSem < 1 || intSem > 20)) {
-                  setState(
-                          () => _semesterError = ErrorMessages.semesterRange);
+                  setState(() => _semesterError = ErrorMessages.semesterRange);
                 } else {
                   setState(() => _semesterError = null);
                 }
@@ -284,14 +278,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               onPressed: _isLoading ? null : _saveProfile,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary30,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _isLoading
-                  ? const CircularProgressIndicator(
-                  color: Colors.white)
+                  ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                 'Save Changes',
                 style: TextStyle(

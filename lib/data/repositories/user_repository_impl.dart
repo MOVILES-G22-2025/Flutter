@@ -33,6 +33,7 @@ class UserRepositoryImpl implements UserRepository {
           'career'  : data['career'],
           'semester': data['semester'],
           'email'   : data['email'],
+          'profileImageUrl': data['profileImageUrl'],
         };
         await (await _dbHelper.database).insert(
           'users',
@@ -70,6 +71,7 @@ class UserRepositoryImpl implements UserRepository {
         'career'  : data['career'],
         'semester': data['semester'],
         'email'   : data['email'],
+        'profileImageUrl': data['profileImageUrl'],
       }, SetOptions(merge: true));
 
       await (await _dbHelper.database).insert(
@@ -136,6 +138,7 @@ class UserRepositoryImpl implements UserRepository {
         'career'  : u['career'],
         'semester': u['semester'],
         'email'   : u['email'],
+        'profileImageUrl': u['profileImageUrl'],
       }, SetOptions(merge: true));
       await _dbHelper.markPendingUserAsSynced(u['id']);
     }
@@ -202,6 +205,7 @@ class UserRepositoryImpl implements UserRepository {
       'career'   : data['career'],
       'semester' : data['semester'],
       'email'    : data['email'],
+      'profileImageUrl': data['profileImageUrl'],
     };
   }
 }

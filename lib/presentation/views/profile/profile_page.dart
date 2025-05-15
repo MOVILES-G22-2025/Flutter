@@ -1,14 +1,14 @@
-import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// lib/presentation/views/profile/profile_page.dart
+import 'dart:io'; // necesario al principio
+
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:senemarket/constants.dart';
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+import 'package:senemarket/core/services/custom_cache_manager.dart';
 
-import '../../../core/services/custom_cache_manager.dart';
+import 'package:senemarket/data/repositories/user_repository_impl.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -18,85 +18,44 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  int _selectedIndex = 4;
-  String userName = 'User';
-  String? profileImageUrl;
+  final UserRepositoryImpl _userRepo = UserRepositoryImpl();
+  final int _selectedIndex = 4;
+  String _userName = 'User';
+  String? _profileImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadLocalUser();
   }
 
-  Future<void> _loadUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists) {
-        setState(() {
-          userName = doc.data()?['name'] ?? 'User';
-          profileImageUrl = doc.data()?['profileImageUrl'];
-        });
-      }
+  Future<void> _loadLocalUser() async {
+    final data = await _userRepo.getUserData();
+    if (data != null) {
+      setState(() {
+        _userName        = data['name'] ?? 'User';
+        _profileImageUrl = data['profileImageUrl'];
+      });
     }
-  }
-
-  Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final storageRef =
-        FirebaseStorage.instance.ref().child('profile_images/${user.uid}.jpg');
-    await storageRef.putFile(File(picked.path));
-    final downloadUrl = await storageRef.getDownloadURL();
-
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-      'profileImageUrl': downloadUrl,
-    });
-
-    setState(() {
-      profileImageUrl = downloadUrl;
-    });
   }
 
   Future<void> _logout() async {
+    // Opcional: detener SyncService si lo usas
+    // SyncService.instance.dispose();
     await FirebaseAuth.instance.signOut();
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
-
   void _onItemTapped(int index) {
-    if (index != _selectedIndex) {
-      switch (index) {
-        case 0:
-          Navigator.pushReplacementNamed(context, '/home');
-          break;
-        case 1:
-          Navigator.pushReplacementNamed(context, '/chats');
-          break;
-        case 2:
-          Navigator.pushReplacementNamed(context, '/add_product');
-          break;
-        case 3:
-          Navigator.pushReplacementNamed(context, '/favorites');
-          break;
-        case 4:
-        default:
-          break;
-      }
-    }
+    if (index == _selectedIndex) return;
+    const routes = ['/home', '/chats', '/add_product', '/favorites', '/edit_profile'];
+    Navigator.pushReplacementNamed(context, routes[index]);
   }
 
   Widget _buildOptionTile(String text, IconData icon, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 9),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: InkWell(
         onTap: onTap,
         borderRadius: const BorderRadius.only(
@@ -104,14 +63,12 @@ class _ProfilePageState extends State<ProfilePage> {
           bottomRight: Radius.circular(30),
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: const BorderRadius.only(
               topRight: Radius.circular(30),
               bottomRight: Radius.circular(30),
-              topLeft: Radius.circular(0),
-              bottomLeft: Radius.circular(0),
             ),
           ),
           child: Row(
@@ -142,95 +99,99 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: AppColors.primary50,
       bottomNavigationBar: NavigationBarApp(selectedIndex: _selectedIndex),
       body: SafeArea(
-        child: Stack(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           children: [
-            ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              children: [
-                const SizedBox(height: 20),
-                const Center(
-                  child: Text(
-                    'Profile',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cabin',
-                    ),
-                  ),
+            const SizedBox(height: 20),
+            const Center(
+              child: Text(
+                'Profile',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cabin',
                 ),
-                const SizedBox(height: 20),
-                Center(
-                  child: GestureDetector(
-                    onTap: _pickAndUploadImage,
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.grey,
-                      child: profileImageUrl != null
-                          ? ClipOval(
-                              child: CachedNetworkImage(
-                                imageUrl: profileImageUrl!,
-                                cacheManager: CustomCacheManager.instance,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) =>
-                                    const CircularProgressIndicator(),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
-                              ),
-                            )
-                          : const Icon(Icons.person,
-                              size: 50, color: Colors.white),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    'Hello, $userName',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cabin',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildOptionTile('Edit profile', Icons.person, () {
-                  Navigator.pushNamed(context, '/edit_profile');
-                }),
-                _buildOptionTile('My products', Icons.shopping_bag, () {
-                  Navigator.pushNamed(context, '/my_products');
-                }),
-                _buildOptionTile('My drafts', Icons.pending_actions, () {
-                  Navigator.pushNamed(context, '/drafts');
-                }),
-                _buildOptionTile('Favorites', Icons.favorite, () {
-                  Navigator.pushNamed(context, '/favorites');
-                }),
-                const SizedBox(height: 90),
-              ],
+              ),
             ),
+            const SizedBox(height: 20),
+            Center(
+              child: CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.grey,
+              child: _profileImageUrl != null
+                  ? ClipOval(
+                child: (() {
+                  final url = _profileImageUrl!;
+                  if (url.startsWith('http')) {
+                    // URL de internet (o cache)
+                    return CachedNetworkImage(
+                      imageUrl: url,
+                      cacheManager: CustomCacheManager.instance,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      placeholder: (_,__) =>
+                      const CircularProgressIndicator(),
+                      errorWidget: (_,__,___) =>
+                      const Icon(Icons.error),
+                    );
+                  } else {
+                    // Ruta local de fichero
+                    return Image.file(
+                      File(url),
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    );
+                  }
+                })(),
+              )
+                  : const Icon(Icons.person, size: 50, color: Colors.white),
+            ),
+
+      ),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'Hello, $_userName',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cabin',
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildOptionTile('Edit profile', Icons.person, () {
+              Navigator.pushNamed(context, '/edit_profile')
+                  .then((_) => _loadLocalUser());
+            }),
+            _buildOptionTile('My products', Icons.shopping_bag, () {
+              Navigator.pushNamed(context, '/my_products');
+            }),
+            _buildOptionTile('My drafts', Icons.pending_actions, () {
+              Navigator.pushNamed(context, '/drafts');
+            }),
+            _buildOptionTile('Favorites', Icons.favorite, () {
+              Navigator.pushNamed(context, '/favorites');
+            }),
+            const SizedBox(height: 90),
             Positioned(
               bottom: 16,
               right: 0,
               child: ElevatedButton.icon(
                 onPressed: _logout,
                 icon: const Icon(Icons.logout, color: Colors.white),
-                label:
-                    const Text('Logout', style: TextStyle(color: Colors.white)),
+                label: const Text('Logout', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade400,
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(40),
                       bottomLeft: Radius.circular(40),
-                      topRight: Radius.circular(0),
-                      bottomRight: Radius.circular(0),
                     ),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ),

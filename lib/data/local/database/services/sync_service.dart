@@ -139,6 +139,7 @@ class SyncService {
       'career'   : data['career'],
       'semester' : data['semester'],
       'email'    : data['email'],
+      'profileImageUrl': data['profileImageUrl']
     };
   }
 

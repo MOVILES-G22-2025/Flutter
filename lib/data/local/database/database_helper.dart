@@ -50,7 +50,8 @@ class DatabaseHelper {
         name TEXT,
         career TEXT,
         semester TEXT,
-        email TEXT
+        email TEXT,
+        profileImageUrl TEXT
       );
     ''');
 
@@ -79,7 +80,8 @@ class DatabaseHelper {
         career TEXT,
         semester TEXT,
         email TEXT,
-        isSynced INTEGER DEFAULT 0
+        isSynced INTEGER DEFAULT 0,
+        profileImageUrl TEXT
       );
     ''');
   }
@@ -111,7 +113,8 @@ class DatabaseHelper {
           name TEXT,
           career TEXT,
           semester TEXT,
-          email TEXT
+          email TEXT,
+          profileImageUrl TEXT
         );
       ''');
     }
@@ -123,7 +126,8 @@ class DatabaseHelper {
           career TEXT,
           semester TEXT,
           email TEXT,
-          isSynced INTEGER DEFAULT 0
+          isSynced INTEGER DEFAULT 0,
+          profileImageUrl TEXT
         );
       ''');
     }
@@ -245,6 +249,7 @@ class DatabaseHelper {
         'semester': user['semester'],
         'email'   : user['email'],
         'isSynced': 0,
+        'profileImageUrl': user['profileImageUrl']
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
