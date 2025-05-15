@@ -4,7 +4,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _dbName = 'products.db';
-  static const _dbVersion = 8;
+  static const _dbVersion = 10;
   static Database? _database;
 
   /// Retorna la instancia singleton de la base de datos.
@@ -39,7 +39,10 @@ class DatabaseHelper {
         imageUrls TEXT,
         favoritedBy TEXT DEFAULT '[]',
         timestamp INTEGER,
-        userId TEXT
+        userId TEXT,
+        isSynced INTEGER DEFAULT 1,
+        operation_type TEXT DEFAULT 'create',
+        images_to_delete TEXT DEFAULT ''
       );
     ''');
 
@@ -68,7 +71,8 @@ class DatabaseHelper {
         timestamp INTEGER,
         userId TEXT,
         isSynced INTEGER DEFAULT 0,
-        operation_type TEXT DEFAULT 'create'
+        operation_type TEXT DEFAULT 'create',
+        images_to_delete TEXT DEFAULT ''
       );
     ''');
 
@@ -129,6 +133,26 @@ class DatabaseHelper {
           isSynced INTEGER DEFAULT 0,
           profileImageUrl TEXT
         );
+      ''');
+    }
+    if (oldV < 9) {
+      await db.execute('''
+        ALTER TABLE pending_products
+        ADD COLUMN images_to_delete TEXT DEFAULT '';
+      ''');
+    }
+    if (oldV < 10) {
+      await db.execute('''
+        ALTER TABLE cached_products
+        ADD COLUMN isSynced INTEGER DEFAULT 1;
+      ''');
+      await db.execute('''
+        ALTER TABLE cached_products
+        ADD COLUMN operation_type TEXT DEFAULT 'create';
+      ''');
+      await db.execute('''
+        ALTER TABLE cached_products
+        ADD COLUMN images_to_delete TEXT DEFAULT '';
       ''');
     }
   }
