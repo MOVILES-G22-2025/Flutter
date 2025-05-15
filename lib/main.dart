@@ -63,6 +63,9 @@ import 'data/datasources/product_remote_data_source.dart';
 import 'package:senemarket/data/local/models/cart_item.dart';
 import 'package:senemarket/core/widgets/app_wrapper.dart';
 
+import 'package:senemarket/data/local/database/services/sync_service.dart';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -82,7 +85,15 @@ void main() async {
   await Hive.openBox<DraftProduct>('draft_products');
   await Hive.openBox<CartItem>('cart');
 
+  // 1) Crea el servicio
+  final syncService = SyncService();
+
+  // 2) Arráncalo para que empiece a escuchar conectividad
+  syncService.start();
+
+
   runApp(const SenemarketApp());
+
 }
 
 class SenemarketApp extends StatefulWidget {

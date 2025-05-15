@@ -1,35 +1,41 @@
 // lib/data/datasources/local/services/sync_service.dart
+import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';                // ← nuevo import
+import 'package:firebase_auth/firebase_auth.dart';
 import '../repositories/product_repository.dart';
-import '../repositories/user_repository.dart';                    // ← nuevo import
+import '../repositories/user_repository.dart';
+import '../../../../data/repositories/user_repository_impl.dart';
 
 class SyncService {
-  final ProductRepository _productRepo = ProductRepository();
-  final UserRepository    _userRepo    = UserRepository();       // ← instancia añadida
+  final ProductRepository   _productRepo = ProductRepository();
+  final UserRepositoryImpl  _userRepo    = UserRepositoryImpl();
 
-  /// Verifica si hay conexión y sincroniza productos + usuario.
   Future<void> verificarConectividadYSincronizar() async {
     final conn = await Connectivity().checkConnectivity();
     if (conn != ConnectivityResult.none) {
-      // — Sincronizar productos (igual que antes) —
+      await _userRepo.syncPendingUsers();
+
+      // ── 2) Pull: refrescar el usuario autenticado ──
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        await sincronizarUsuarioPorEmail(user.email!);
+      }
+
+      // ── 3) Tu sincronización de productos (igual que antes) ──
       final snapshot =
       await FirebaseFirestore.instance.collection('products').get();
       for (final doc in snapshot.docs) {
         final data       = doc.data();
         final productMap = _firestoreToSqliteProduct(data, doc.id);
 
-        (await _productRepo.getProductById(doc.id)) == null
-            ? await _productRepo.insertProduct(productMap)
-            : await _productRepo.updateProduct(productMap);
-      }
-
-      // — Sincronizar usuario autenticado —
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null && user.email != null) {
-        await sincronizarUsuarioPorEmail(user.email!);
+        final exists = await _productRepo.getProductById(doc.id);
+        if (exists == null) {
+          await _productRepo.insertProduct(productMap);
+        } else {
+          await _productRepo.updateProduct(productMap);
+        }
       }
     } else {
       print('⚠️  Sin conexión: sólo datos locales');
@@ -111,9 +117,12 @@ class SyncService {
         final doc     = snapshot.docs.first;
         final userMap = _firestoreToSqliteUser(doc.data(), doc.id);
 
-        (await _userRepo.getUserById(doc.id)) == null
-            ? await _userRepo.insertUser(userMap)
-            : await _userRepo.updateUser(userMap);
+        final exists = await _userRepo.getUserById(doc.id);
+        if (exists == null) {
+          await _userRepo.insertUser(userMap);
+        } else {
+          await _userRepo.updateUser(userMap);
+        }
       } else {
         print('No se encontró el usuario con el email $email');
       }
@@ -132,5 +141,27 @@ class SyncService {
       'email'    : data['email'],
     };
   }
-}
 
+
+  StreamSubscription<ConnectivityResult>? _connSub;
+
+  /// Llama inicialmente y luego a cada cambio de conectividad
+  void start() {
+    // Primer intento
+    verificarConectividadYSincronizar();
+
+    // Escuchar cambios
+    _connSub = Connectivity()
+        .onConnectivityChanged
+        .listen((status) {
+      if (status != ConnectivityResult.none) {
+        verificarConectividadYSincronizar();
+      }
+    });
+  }
+
+  /// Para liberar la suscripción cuando cierres sesión o la app termine
+  void dispose() {
+    _connSub?.cancel();
+  }
+}
