@@ -26,28 +26,16 @@ class SignUpViewModel extends ChangeNotifier {
     errorMessage = '';
     notifyListeners();
 
-    try {
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+    final result = await _authRepository.signUpWithEmailAndPassword(
+      email,
+      password,
+      name,
+      career,
+      semester,
+    );
 
-      final userId = userCredential.user?.uid;
-      if (userId != null) {
-        await FirebaseFirestore.instance.collection('users').doc(userId).set({
-          'name': name,
-          'email': email,
-          'career': career,
-          'semester': semester,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'email-already-in-use') {
-        errorMessage = 'This email is already registered.';
-      } else {
-        errorMessage = e.message ?? 'Unknown error';
-      }
-    } catch (e) {
-      errorMessage = 'Something went wrong.';
+    if (result != null) {
+      errorMessage = result;
     }
 
     isLoading = false;
