@@ -268,7 +268,11 @@ class ProductDetailPageContent extends StatelessWidget {
                         price: product.price,
                         imageUrl: product.imageUrls.isNotEmpty
                             ? product.imageUrls.first
-                            : '', // o alguna imagen por defecto
+                            : '',
+                        description: product.description,
+                        category: product.category,
+                        sellerName: product.sellerName,
+                        sellerId: product.userId,
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Added to your shopping cart')),

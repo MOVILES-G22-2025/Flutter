@@ -92,12 +92,13 @@ class _CartRow extends StatelessWidget {
     final product = Product(
       id: item.productId,
       name: item.name,
-      description: '',
-      category: '',
+      description: item.description ?? '',
+      category: item.category ?? '',
       price: item.price,
       imageUrls: [item.imageUrl],
-      sellerName: '',
-      favoritedBy: [], userId: '',
+      sellerName: item.sellerName ?? '',
+      favoritedBy: [],
+      userId: item.userId ?? '',
     );
 
     return InkWell(
@@ -142,6 +143,10 @@ class _CartRow extends StatelessWidget {
                 name: item.name,
                 price: item.price,
                 imageUrl: item.imageUrl,
+                description: item.description ?? '',
+                category: item.category ?? '',
+                sellerName: item.sellerName,
+                sellerId: item.userId ?? '',
               ),
             ),
             IconButton(

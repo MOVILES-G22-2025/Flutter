@@ -22,6 +22,9 @@ class AuthRepositoryImpl implements AuthRepository {
     if (user == null) {
       return 'Incorrect credentials.';
     }
+
+    await _userDataSource.logUserEvent(user.uid, 'signin');
+
     return null;
   }
 

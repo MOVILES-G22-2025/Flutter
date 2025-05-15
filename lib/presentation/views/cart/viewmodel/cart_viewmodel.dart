@@ -82,10 +82,14 @@ class CartViewModel extends ChangeNotifier {
         final data = doc.data();
         final item = CartItem(
           productId: doc.id,
-          name: data['name'] as String? ?? '',
+          name: data['name'] is String ? data['name'] : '',
           price: (data['price'] as num?)?.toDouble() ?? 0.0,
           quantity: (data['quantity'] as num?)?.toInt() ?? 0,
-          imageUrl: data['imageUrl'] as String? ?? '',
+          imageUrl: data['imageUrl'] is String ? data['imageUrl'] : '',
+          description: data['description'] is String ? data['description'] : '',
+          category: data['category'] is String ? data['category'] : '',
+          sellerName: data['sellerName'] is String ? data['sellerName'] : '',
+          userId: data['userId'] is String ? data['userId'] : '',
         );
         await _box.put(item.productId, item);
       }
@@ -114,6 +118,10 @@ class CartViewModel extends ChangeNotifier {
     required String name,
     required double price,
     required String imageUrl,
+    required String description,
+    required String category,
+    required String sellerName,
+    required String sellerId,
   }) async {
     final existing = _box.get(productId);
     if (existing != null) {
@@ -128,6 +136,10 @@ class CartViewModel extends ChangeNotifier {
           price: price,
           quantity: 1,
           imageUrl: imageUrl,
+          description: description,
+          category: category,
+          sellerName: sellerName,
+          userId: sellerId,
         ),
       );
     }
@@ -148,6 +160,10 @@ class CartViewModel extends ChangeNotifier {
           'imageUrl': imageUrl,
           'quantity': existing?.quantity ?? 1,
           'addedAt': FieldValue.serverTimestamp(),
+          'description': description,
+          'category': category,
+          'sellerName': sellerName,
+          'userId': sellerId,
         }, SetOptions(merge: true));
       } catch (e) {
         debugPrint('Error syncing add to cart: $e');
