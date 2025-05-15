@@ -28,17 +28,32 @@ class EditProductViewModel extends ChangeNotifier {
 
     bool result = false;
 
-    await _productRepository.updateProduct(
-      productId: productId, 
-      updatedProduct: updatedProduct,
-      newImages: newImages,
-      imagesToDelete: imagesToDelete,
-    ).then((_) {
-      result = true;
-    }).catchError((e) {
+    try {
+      final isOnline = await _productRepository.connectivity.isOnline$.first;
+      
+      if (!isOnline) {
+        // Guardar en pending_products si estamos offline
+        await _productRepository.updateProductOffline(
+          productId: productId,
+          updatedProduct: updatedProduct,
+          newImages: newImages,
+          imagesToDelete: imagesToDelete,
+        );
+        result = true;
+      } else {
+        // Actualizar normalmente si hay conexión
+        await _productRepository.updateProduct(
+          productId: productId,
+          updatedProduct: updatedProduct,
+          newImages: newImages,
+          imagesToDelete: imagesToDelete,
+        );
+        result = true;
+      }
+    } catch (e) {
       errorMessage = e.toString();
       result = false;
-    });
+    }
 
     isLoading = false;
     notifyListeners();

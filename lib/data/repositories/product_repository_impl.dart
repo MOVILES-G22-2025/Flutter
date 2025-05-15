@@ -296,6 +296,41 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
+  @override
+  Future<void> updateProductOffline({
+    required String productId,
+    required Product updatedProduct,
+    required List<XFile?> newImages,
+    required List<String> imagesToDelete,
+  }) async {
+    final user = _auth.currentUser!;
+    
+    // Guardar las imágenes nuevas localmente
+    final imagePaths = newImages
+        .where((e) => e != null)
+        .map((e) => e!.path)
+        .toList();
+
+    // Obtener las URLs actuales y remover las que se deben eliminar
+    final currentUrls = List<String>.from(updatedProduct.imageUrls)
+      ..removeWhere(imagesToDelete.contains);
+
+    // Guardar en pending_products
+    await _db.savePendingProduct({
+      'id': productId,
+      'name': updatedProduct.name,
+      'description': updatedProduct.description,
+      'category': updatedProduct.category,
+      'price': updatedProduct.price,
+      'sellerName': updatedProduct.sellerName,
+      'imageUrls': [...currentUrls, ...imagePaths].join(','),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'userId': user.uid,
+      'isSynced': 0,
+      'operation_type': 'edit',
+    });
+  }
+
   ///Borradores vía Hive
   @override
   Future<void> saveDraftProduct(DraftProduct draft) async {
@@ -319,14 +354,18 @@ class ProductRepositoryImpl implements ProductRepository {
       final ts = DateTime.fromMillisecondsSinceEpoch(rawTs);
       final userId = row['userId'] as String;
       final rawImgs = row['imageUrls'] as String;
+      final operationType = row['operation_type'] as String? ?? 'create';
+      
       final paths = rawImgs
           .split(',')
           .where((p) => p.isNotEmpty && File(p).existsSync())
           .toList();
+      
       if (paths.isEmpty) {
         await _db.deletePendingProduct(id);
         continue;
       }
+      
       final images = paths.map((p) => XFile(p)).toList();
 
       final product = Product(
@@ -343,7 +382,13 @@ class ProductRepositoryImpl implements ProductRepository {
       );
 
       try {
-        await _syncOfflineWithId(id, images, product);
+        if (operationType == 'edit') {
+          // Para ediciones, usamos el ID existente
+          await _syncOfflineWithId(id, images, product);
+        } else {
+          // Para creaciones, generamos un nuevo ID
+          await _syncOfflineWithId(id, images, product);
+        }
         await _db.deletePendingProduct(id);
       } catch (e) {
         debugPrint('❌ Failed syncing pending $id: $e');

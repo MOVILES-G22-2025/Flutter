@@ -6,7 +6,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _dbName = 'products.db';
-  static const _dbVersion = 5;
+  static const _dbVersion = 6;
   static Database? _database;
 
   /// Returns a singleton database instance.
@@ -57,7 +57,8 @@ class DatabaseHelper {
         imageUrls TEXT,
         timestamp INTEGER,
         userId TEXT,
-        isSynced INTEGER DEFAULT 0
+        isSynced INTEGER DEFAULT 0,
+        operation_type TEXT DEFAULT 'create'
       );
     ''');
   }
@@ -76,6 +77,13 @@ class DatabaseHelper {
       await db.execute('''
         ALTER TABLE cached_products
         ADD COLUMN favoritedBy TEXT DEFAULT '[]';
+      ''');
+    }
+    if (oldV < 6) {
+      // v6: add operation_type to pending_products
+      await db.execute('''
+        ALTER TABLE pending_products
+        ADD COLUMN operation_type TEXT DEFAULT 'create';
       ''');
     }
   }
