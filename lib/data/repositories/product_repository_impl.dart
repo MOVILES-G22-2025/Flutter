@@ -196,6 +196,25 @@ class ProductRepositoryImpl implements ProductRepository {
         await _db.upsertCachedProduct(map);
       }
 
+      // 6. Asegurarse de que los favoritos se mantengan en la caché
+      if (userId != null) {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final favIds = List<String>.from(userDoc.data()?['favorites'] ?? []);
+        
+        for (final favId in favIds) {
+          final doc = await _firestore.collection('products').doc(favId).get();
+          if (!doc.exists) continue;
+          
+          final dto = ProductDTO.fromFirestore(doc.id, doc.data()!);
+          final map = dto.toFirestore()
+            ..['id'] = dto.id
+            ..['imageUrls'] = dto.imageUrls.join(',')
+            ..['favoritedBy'] = jsonEncode(dto.favoritedBy)
+            ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
+          await _db.upsertCachedProduct(map);
+        }
+      }
+
       return dtoList.map((dto) => dto.toDomain()).toList();
     }).asyncMap((future) => future);
   }
