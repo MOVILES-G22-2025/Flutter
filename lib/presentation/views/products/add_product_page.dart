@@ -51,24 +51,48 @@ class _AddProductPageState extends State<AddProductPage> {
        _images.addAll(draft.imagePaths.map((p) => XFile(p)));
        _validateForm();
     }
-    _nameController.addListener(_saveDraft);
-    _descriptionController.addListener(_saveDraft);
-    _priceController.addListener(_saveDraft);
   }
 
   void _saveDraft() {
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid ?? 'anonymous';
-    final draft = _draftBox.get(_draftKey) ??
-    DraftProduct(id: _draftKey, userId: userId);
-    draft
-    ..name        = _nameController.text.trim()
-    ..description = _descriptionController.text.trim()
-    ..price       = double.tryParse(_priceController.text.trim()) ?? 0.0
-    ..category    = _selectedCategory ?? ''
-    ..imagePaths  = _images.where((f) => f!=null).map((f) => f!.path).toList()
-    ..lastUpdated = DateTime.now();
+    
+    // Solo guardar si hay algún campo lleno
+    if (_nameController.text.trim().isEmpty && 
+        _descriptionController.text.trim().isEmpty && 
+        _priceController.text.trim().isEmpty && 
+        _selectedCategory == null && 
+        _images.isEmpty) {
+      return;
+    }
+
+    final draft = DraftProduct(
+      id: _draftKey,
+      userId: userId,
+      name: _nameController.text.trim(),
+      description: _descriptionController.text.trim(),
+      price: double.tryParse(_priceController.text.trim()) ?? 0.0,
+      category: _selectedCategory ?? '',
+      imagePaths: _images.where((f) => f!=null).map((f) => f!.path).toList(),
+      lastUpdated: DateTime.now(),
+    );
+    
+    draft.updateCompleteness();
     _draftBox.put(_draftKey, draft);
+  }
+
+  void _clearForm() {
+    setState(() {
+      _nameController.clear();
+      _descriptionController.clear();
+      _priceController.clear();
+      _selectedCategory = null;
+      _images.clear();
+      _isFormValid = false;
+      _nameError = null;
+      _priceError = null;
+    });
+    _draftBox.delete(_draftKey);
   }
 
   void _validateForm() {
@@ -268,7 +292,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   CustomTextField(controller: _priceController, label: 'Price', isNumeric: true, onChanged: (_) => _validateForm()),
                   ErrorText(_priceError),
                   const SizedBox(height: 20),
-                  // Botón principal “Add”
+                  // Botón principal "Add"
                    ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFormValid
@@ -294,7 +318,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Botón secundario “Guardar borrador”
+                  // Botón secundario "Guardar borrador"
                   TextButton.icon(
                     icon: const Icon(Icons.save_alt, color: constants.AppColors.primary30),
                     label: const Text(
@@ -306,16 +330,43 @@ class _AddProductPageState extends State<AddProductPage> {
                       ),
                     ),
                     onPressed: () async {
+                      // Solo guardar si hay algún campo lleno
+                      if (_nameController.text.trim().isEmpty && 
+                          _descriptionController.text.trim().isEmpty && 
+                          _priceController.text.trim().isEmpty && 
+                          _selectedCategory == null && 
+                          _images.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please fill at least one field')),
+                        );
+                        return;
+                      }
+
                       final vm = context.read<AddProductViewModel>();
                       await vm.saveDraft(
                         name: _nameController.text.trim(),
                         description: _descriptionController.text.trim(),
                         category: _selectedCategory ?? '',
                         price: double.tryParse(_priceController.text.trim()),
+                        images: _images,
                       );
+                      
+                      // Limpiar el formulario después de guardar
+                      _clearForm();
+                      
+                      // Mostrar mensaje de éxito
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Saved draft')),
                       );
+
+                      // Redirigir a la pantalla de drafts
+                      if (mounted) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context, 
+                          '/drafts',
+                          (route) => false,
+                        );
+                      }
                     },
                   ),
                   const SizedBox(height: 20),

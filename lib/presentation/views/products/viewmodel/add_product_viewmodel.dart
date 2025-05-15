@@ -60,17 +60,14 @@ class AddProductViewModel extends ChangeNotifier {
       userId: '',
     );
 
-    _productRepository
-        .addProduct(images: images, product: product)
-        .then((_) {
-    })
-        .catchError((e) {
+    try {
+      await _productRepository.addProduct(images: images, product: product);
+    } catch (e) {
       errorMessage = e.toString();
-    })
-        .whenComplete(() {
+    } finally {
       isLoading = false;
       notifyListeners();
-    });
+    }
   }
 
   Future<void> saveProductOffline({
@@ -98,9 +95,7 @@ class AddProductViewModel extends ChangeNotifier {
         'price': price,
         'sellerName': '',
         'imageUrls': imagePaths.join(','),
-        'timestamp': DateTime
-            .now()
-            .millisecondsSinceEpoch,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
         'userId': '',
         'isSynced': 0,
       };
@@ -118,9 +113,24 @@ class AddProductViewModel extends ChangeNotifier {
     required String description,
     required String category,
     required double? price,
+    required List<XFile?> images,
   }) async {
     try {
+      // Solo guardar si hay algún campo lleno
+      if (name.isEmpty && 
+          description.isEmpty && 
+          (price == null || price == 0) && 
+          category.isEmpty && 
+          images.isEmpty) {
+        return;
+      }
+
       final now = DateTime.now();
+      final imagePaths = images
+          .where((e) => e != null)
+          .map((e) => e!.path)
+          .toList();
+      
       final draft = DraftProduct(
         id: const Uuid().v4(),
         name: name,
@@ -128,12 +138,49 @@ class AddProductViewModel extends ChangeNotifier {
         price: price ?? 0.0,
         category: category,
         userId: _productRepository.currentUserId,
-        // expón getter en repo
+        imagePaths: imagePaths,
         createdAt: now,
+        lastUpdated: now,
       );
+      
+      draft.updateCompleteness();
       await _productRepository.saveDraftProduct(draft);
     } catch (e) {
-      errorMessage = 'Error guardando borrador';
+      errorMessage = 'Error guardando borrador: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateDraft({
+    required String draftId,
+    required String name,
+    required String description,
+    required String category,
+    required double? price,
+    required List<XFile?> images,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final imagePaths = images
+          .where((e) => e != null)
+          .map((e) => e!.path)
+          .toList();
+      
+      final draft = DraftProduct(
+        id: draftId,
+        name: name,
+        description: description,
+        price: price ?? 0.0,
+        category: category,
+        userId: _productRepository.currentUserId,
+        imagePaths: imagePaths,
+        lastUpdated: now,
+      );
+      
+      draft.updateCompleteness();
+      await _productRepository.saveDraftProduct(draft);
+    } catch (e) {
+      errorMessage = 'Error actualizando borrador: $e';
       notifyListeners();
     }
   }

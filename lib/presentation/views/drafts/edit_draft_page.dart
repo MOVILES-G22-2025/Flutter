@@ -23,100 +23,77 @@ class EditDraftPage extends StatefulWidget {
 }
 
 class _EditDraftPageState extends State<EditDraftPage> {
-  final _picker = ImagePicker();
-
-  late TextEditingController _nameCtrl;
-  late TextEditingController _descCtrl;
-  late TextEditingController _priceCtrl;
+  final _nameCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
   String? _category;
   final List<XFile?> _images = [];
-
-  bool _isFormValid = false;
   bool _submitting = false;
-  String? _nameError;
-  String? _priceError;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: widget.draft.name);
-    _descCtrl = TextEditingController(text: widget.draft.description);
-    _priceCtrl = TextEditingController(text: widget.draft.price.toString());
-    _category = constants.ProductClassification.categories.contains(widget.draft.category)
-        ? widget.draft.category
-        : null;
-    // load existing image paths if any
-    _loadImages();
-    _nameCtrl.addListener(_validateForm);
-    _descCtrl.addListener(_validateForm);
-    _priceCtrl.addListener(_validateForm);
+    _nameCtrl.text = widget.draft.name;
+    _descCtrl.text = widget.draft.description;
+    _priceCtrl.text = widget.draft.price.toString();
+    _category = widget.draft.category;
+    _images.addAll(widget.draft.imagePaths.map((p) => XFile(p)));
     _validateForm();
   }
 
-  Future<void> _loadImages() async {
-    final List<XFile> validImages = [];
-
-    for (final path in widget.draft.imagePaths) {
-      final file = File(path);
-      if (await file.exists()) {
-        validImages.add(XFile(path));
-      }
-    }
-
-    setState(() {
-      _images.clear();
-      _images.addAll(validImages);
-    });
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _descCtrl.dispose();
-    _priceCtrl.dispose();
-    super.dispose();
-  }
-
   void _validateForm() {
-    final name = _nameCtrl.text.trim();
-    final desc = _descCtrl.text.trim();
-    final priceText = _priceCtrl.text.trim();
-    final price = double.tryParse(priceText);
     setState(() {
-      _nameError = name.isEmpty
-          ? 'Required'
-          : (name.length > 40 ? constants.ErrorMessages.maxChar : null);
-      _priceError = price == null
-          ? 'Invalid'
-          : (price < 1000 ? 'Minimum price is \$1000' : null);
-      _isFormValid = _nameError == null &&
-          desc.isNotEmpty &&
+      _isFormValid = _nameCtrl.text.isNotEmpty &&
+          _descCtrl.text.isNotEmpty &&
+          _priceCtrl.text.isNotEmpty &&
           _category != null &&
-          _priceError == null &&
           _images.isNotEmpty;
     });
   }
 
-  Future<void> _pickImage(ImageSource src) async {
-    if (_images.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 5 images allowed')),
-      );
-      return;
-    }
-    final file = await _picker.pickImage(source: src, imageQuality: 80);
-    if (file != null) {
+  Future<void> _pickImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> images = await picker.pickMultiImage();
+    if (images.isNotEmpty) {
       setState(() {
-        _images.add(file);
+        _images.addAll(images);
         _validateForm();
       });
     }
   }
 
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+      _validateForm();
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    if (!_isFormValid) return;
+    
+    final vm = context.read<EditDraftViewModel>();
+    await vm.updateDraft(
+      draftId: widget.draft.id,
+      name: _nameCtrl.text.trim(),
+      description: _descCtrl.text.trim(),
+      category: _category!,
+      price: double.tryParse(_priceCtrl.text.trim()),
+      images: _images,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Draft saved')),
+    );
+    Navigator.pop(context);
+  }
+
   Future<void> _publishDraft() async {
     if (!_isFormValid) return;
     setState(() => _submitting = true);
-    // show loading dialog
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -184,6 +161,12 @@ class _EditDraftPageState extends State<EditDraftPage> {
             color: constants.AppColors.primary0,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _saveDraft,
+          ),
+        ],
       ),
       bottomNavigationBar: const NavigationBarApp(selectedIndex: 4),
       body: SingleChildScrollView(
@@ -191,57 +174,62 @@ class _EditDraftPageState extends State<EditDraftPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // image picker
-            CustomImagePicker(
-              onPickImageFromCamera: () => _pickImage(ImageSource.camera),
-              onPickImageFromGallery: () => _pickImage(ImageSource.gallery),
-              image: _images,
-              onRemoveImage: (i) {
+            CustomTextField(
+              controller: _nameCtrl,
+              label: 'Name',
+              onChanged: (_) => _validateForm(),
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _descCtrl,
+              label: 'Description',
+              onChanged: (_) => _validateForm(),
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _priceCtrl,
+              label: 'Price',
+              isNumeric: true,
+              onChanged: (_) => _validateForm(),
+            ),
+            const SizedBox(height: 16),
+            SearchableDropdown(
+              label: 'Category',
+              selectedItem: _category,
+              items: const ['Electronics', 'Clothing', 'Books', 'Other'],
+              onChanged: (value) {
                 setState(() {
-                  _images.removeAt(i);
+                  _category = value;
                   _validateForm();
                 });
               },
             ),
             const SizedBox(height: 16),
-            // Name
-            CustomTextField(
-              label: 'Name',
-              controller: _nameCtrl,
-              onChanged: (_) => _validateForm(),
-            ),
-            if (_nameError != null) ErrorText(_nameError),
-            const SizedBox(height: 12),
-            // Description
-            CustomTextField(
-              label: 'Description',
-              controller: _descCtrl,
-              onChanged: (_) => _validateForm(),
-            ),
-            const SizedBox(height: 12),
-            // Category
-            SearchableDropdown(
-              label: 'Category',
-              items: constants.ProductClassification.categories,
-              selectedItem: _category,
-              onChanged: (v) {
-                setState(() {
-                  _category = v;
-                  _validateForm();
-                });
+            CustomImagePicker(
+              image: _images,
+              onPickImageFromCamera: () async {
+                final ImagePicker picker = ImagePicker();
+                final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                if (image != null) {
+                  setState(() {
+                    _images.add(image);
+                    _validateForm();
+                  });
+                }
               },
+              onPickImageFromGallery: () async {
+                final ImagePicker picker = ImagePicker();
+                final List<XFile> images = await picker.pickMultiImage();
+                if (images.isNotEmpty) {
+                  setState(() {
+                    _images.addAll(images);
+                    _validateForm();
+                  });
+                }
+              },
+              onRemoveImage: _removeImage,
             ),
-            const SizedBox(height: 12),
-            // Price
-            CustomTextField(
-              label: 'Price',
-              controller: _priceCtrl,
-              isNumeric: true,
-              onChanged: (_) => _validateForm(),
-            ),
-           ErrorText(_priceError),
             const SizedBox(height: 24),
-            // Publish button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _isFormValid
@@ -271,5 +259,13 @@ class _EditDraftPageState extends State<EditDraftPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
   }
 }
