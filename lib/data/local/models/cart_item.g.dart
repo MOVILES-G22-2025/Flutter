@@ -22,6 +22,10 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       price: fields[2] as double,
       quantity: fields[3] as int,
       imageUrl: fields[4] as String,
+      description: fields[5] as String,
+      category: fields[6] as String,
+      sellerName: fields[7] as String,
+      userId: fields[8] as String,
     );
   }
 
@@ -38,7 +42,15 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       ..writeByte(3)
       ..write(obj.quantity)
       ..writeByte(4)
-      ..write(obj.imageUrl);
+      ..write(obj.imageUrl)
+      ..writeByte(5)
+      ..write(obj.description)
+      ..writeByte(6)
+      ..write(obj.category)
+      ..writeByte(7)
+      ..write(obj.sellerName)
+      ..writeByte(8)
+      ..write(obj.userId);
   }
 
   @override
