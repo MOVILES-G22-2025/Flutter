@@ -171,21 +171,18 @@ class ProductRepositoryImpl implements ProductRepository {
           : <Map<String, dynamic>>[];
       final favoriteIds = favoriteProducts.map((p) => p['id'] as String).toSet();
 
-      // 2. Filtrar productos que no son del usuario actual
-      final otherUsersProducts = dtoList.where((dto) => dto.userId != userId).toList();
+      // 2. Preparar los productos para la caché
+      final productsToCache = dtoList.take(40).toList(); // Tomar los 40 más recientes
       
-      // 3. Preparar los nuevos productos para la caché
-      final productsToCache = otherUsersProducts.take(40).toList(); // Tomar solo los 40 más recientes
-      
-      // 4. Agregar productos favoritos que no estén en los 40 más recientes
-      for (final dto in otherUsersProducts) {
+      // 3. Agregar productos favoritos que no estén en los 40 más recientes
+      for (final dto in dtoList) {
         if (favoriteIds.contains(dto.id) && 
             !productsToCache.any((p) => p.id == dto.id)) {
           productsToCache.add(dto);
         }
       }
 
-      // 5. Limpiar caché y guardar nuevos productos
+      // 4. Limpiar caché y guardar nuevos productos
       await _db.clearCachedProducts();
       for (final dto in productsToCache) {
         final map = dto.toFirestore()
@@ -194,6 +191,25 @@ class ProductRepositoryImpl implements ProductRepository {
           ..['favoritedBy'] = jsonEncode(dto.favoritedBy)
           ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
         await _db.upsertCachedProduct(map);
+      }
+
+      // 5. Asegurarse de que los favoritos se mantengan en la caché
+      if (userId != null) {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final favIds = List<String>.from(userDoc.data()?['favorites'] ?? []);
+        
+        for (final favId in favIds) {
+          final doc = await _firestore.collection('products').doc(favId).get();
+          if (!doc.exists) continue;
+          
+          final dto = ProductDTO.fromFirestore(doc.id, doc.data()!);
+          final map = dto.toFirestore()
+            ..['id'] = dto.id
+            ..['imageUrls'] = dto.imageUrls.join(',')
+            ..['favoritedBy'] = jsonEncode(dto.favoritedBy)
+            ..['timestamp'] = dto.timestamp?.millisecondsSinceEpoch;
+          await _db.upsertCachedProduct(map);
+        }
       }
 
       return dtoList.map((dto) => dto.toDomain()).toList();
@@ -296,6 +312,51 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
+  @override
+  Future<void> updateProductOffline({
+    required String productId,
+    required Product updatedProduct,
+    required List<XFile?> newImages,
+    required List<String> imagesToDelete,
+  }) async {
+    final user = _auth.currentUser!;
+    
+    // Guardar las imágenes nuevas localmente
+    final imagePaths = newImages
+        .where((e) => e != null)
+        .map((e) => e!.path)
+        .toList();
+
+    // Obtener las URLs actuales y remover las que se deben eliminar
+    final currentUrls = List<String>.from(updatedProduct.imageUrls)
+      ..removeWhere(imagesToDelete.contains);
+
+    // Crear el mapa del producto con las rutas locales de las imágenes
+    final productMap = {
+      'id': productId,
+      'name': updatedProduct.name,
+      'description': updatedProduct.description,
+      'category': updatedProduct.category,
+      'price': updatedProduct.price,
+      'sellerName': updatedProduct.sellerName,
+      'imageUrls': [...currentUrls, ...imagePaths].join(','),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'userId': user.uid,
+      'isSynced': 0,
+      'operation_type': 'edit',
+      'images_to_delete': imagesToDelete.join(','), // Guardar las URLs a eliminar
+    };
+
+    // Guardar en pending_products
+    await _db.savePendingProduct(productMap);
+
+    // Actualizar también en cached_products para reflejar cambios inmediatamente
+    await _db.upsertCachedProduct({
+      ...productMap,
+      'favoritedBy': jsonEncode(updatedProduct.favoritedBy),
+    });
+  }
+
   ///Borradores vía Hive
   @override
   Future<void> saveDraftProduct(DraftProduct draft) async {
@@ -319,15 +380,20 @@ class ProductRepositoryImpl implements ProductRepository {
       final ts = DateTime.fromMillisecondsSinceEpoch(rawTs);
       final userId = row['userId'] as String;
       final rawImgs = row['imageUrls'] as String;
-      final paths = rawImgs
-          .split(',')
-          .where((p) => p.isNotEmpty && File(p).existsSync())
-          .toList();
-      if (paths.isEmpty) {
+      final operationType = row['operation_type'] as String? ?? 'create';
+      final imagesToDelete = (row['images_to_delete'] as String?)?.split(',') ?? [];
+      
+      // Separar URLs remotas de rutas locales
+      final allPaths = rawImgs.split(',');
+      final localPaths = allPaths.where((p) => p.isNotEmpty && File(p).existsSync()).toList();
+      final remoteUrls = allPaths.where((p) => p.startsWith('http')).toList();
+      
+      if (localPaths.isEmpty && remoteUrls.isEmpty) {
         await _db.deletePendingProduct(id);
         continue;
       }
-      final images = paths.map((p) => XFile(p)).toList();
+      
+      final images = localPaths.map((p) => XFile(p)).toList();
 
       final product = Product(
         id: id,
@@ -335,7 +401,7 @@ class ProductRepositoryImpl implements ProductRepository {
         description: desc,
         category: cat,
         price: price,
-        imageUrls: [],
+        imageUrls: remoteUrls, // Mantener las URLs remotas existentes
         sellerName: '',
         favoritedBy: [],
         timestamp: ts,
@@ -343,7 +409,25 @@ class ProductRepositoryImpl implements ProductRepository {
       );
 
       try {
-        await _syncOfflineWithId(id, images, product);
+        if (operationType == 'edit') {
+          // Para ediciones, subir nuevas imágenes y actualizar
+          final newUrls = await _remote.uploadImages(images);
+          final updated = product.copyWith(
+            imageUrls: [...remoteUrls, ...newUrls],
+          );
+          final dto = ProductDTO.fromDomain(updated);
+          await _remote.updateProduct(id, dto);
+          
+          // Eliminar imágenes marcadas para borrar
+          for (final url in imagesToDelete) {
+            if (url.isNotEmpty) {
+              await _remote.deleteImageByUrl(url);
+            }
+          }
+        } else {
+          // Para creaciones, usar el flujo normal
+          await _syncOfflineWithId(id, images, product);
+        }
         await _db.deletePendingProduct(id);
       } catch (e) {
         debugPrint('❌ Failed syncing pending $id: $e');

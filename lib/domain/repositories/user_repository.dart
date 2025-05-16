@@ -14,4 +14,7 @@ abstract class UserRepository {
 
   /// Increments a specific category click count.
   Future<void> incrementCategoryClick(String userId, String category);
+
+  Future<void> syncPendingUsers();
 }
+

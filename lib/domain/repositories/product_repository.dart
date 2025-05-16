@@ -1,9 +1,11 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/data/local/models/draft_product.dart';
 import '../entities/product.dart';
+import '../../core/services/connectivity_service.dart';
 
 abstract class ProductRepository {
   String get currentUserId;
+  ConnectivityService get connectivity;
 
   Future<List<Product>> searchProducts(String query);
 
@@ -15,6 +17,13 @@ abstract class ProductRepository {
   Stream<List<Product>> getProductsStream();
 
   Future<void> updateProduct({
+    required String productId,
+    required Product updatedProduct,
+    required List<XFile?> newImages,
+    required List<String> imagesToDelete,
+  });
+
+  Future<void> updateProductOffline({
     required String productId,
     required Product updatedProduct,
     required List<XFile?> newImages,

@@ -107,7 +107,37 @@ class _EditProductPageState extends State<EditProductPage> {
     );
   }
 
-  // Save product with updates
+  Future<void> _showOfflineConfirmation() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: Duration(seconds: 3),
+        backgroundColor: constants.AppColors.primary30,
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Changes saved offline. Will sync automatically when connectivity is restored',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveChanges() async {
     final viewModel = context.read<EditProductViewModel>();
     final double? price = double.tryParse(_priceController.text);
@@ -143,6 +173,11 @@ class _EditProductPageState extends State<EditProductPage> {
     );
 
     if (success) {
+      // Check if we're offline
+      final isOnline = await viewModel.connectivity.isOnline$.first;
+      if (!isOnline) {
+        await _showOfflineConfirmation();
+      }
       Navigator.pop(context);
     } else {
       _showSnackBar("Error updating product.");

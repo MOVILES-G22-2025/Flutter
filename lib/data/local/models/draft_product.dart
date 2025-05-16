@@ -2,6 +2,7 @@ import 'package:hive/hive.dart';
 import 'package:senemarket/domain/entities/product.dart';
 
 part 'draft_product.g.dart';
+
 @HiveType(typeId: 3)
 class DraftProduct extends HiveObject {
   @HiveField(0) final String id;
@@ -13,6 +14,7 @@ class DraftProduct extends HiveObject {
   @HiveField(6) DateTime createdAt;
   @HiveField(7) List<String> imagePaths;
   @HiveField(8) DateTime lastUpdated;
+  @HiveField(9) bool isComplete;  // Indica si el draft tiene todos los campos requeridos
 
   DraftProduct({
     required this.id,
@@ -24,6 +26,7 @@ class DraftProduct extends HiveObject {
     DateTime? createdAt,
     List<String>? imagePaths,
     DateTime? lastUpdated,
+    this.isComplete = false,
   })  : createdAt   = createdAt   ?? DateTime.now(),
         imagePaths  = imagePaths  ?? [],
         lastUpdated = lastUpdated ?? DateTime.now();
@@ -42,5 +45,18 @@ class DraftProduct extends HiveObject {
       timestamp: lastUpdated,
       userId: userId,
     );
+  }
+
+  /// Verifica si el draft está completo
+  bool get isValid => 
+    name.isNotEmpty && 
+    description.isNotEmpty && 
+    price > 0 && 
+    category.isNotEmpty && 
+    imagePaths.isNotEmpty;
+
+  /// Actualiza el estado de completitud
+  void updateCompleteness() {
+    isComplete = isValid;
   }
 }

@@ -149,7 +149,7 @@ class ProductDTO {
       price: double.tryParse(data['price'].toString()) ?? 0.0,
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       sellerName: data['sellerName'] ?? '',
-      favoritedBy: [],
+      favoritedBy: List<String>.from(data['favoritedBy'] ?? []),
       timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
       userId: data['userId'] ?? '',
     );

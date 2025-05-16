@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
+import 'package:senemarket/core/services/connectivity_service.dart';
 
 import '../../../../core/services/custom_cache_manager.dart';
 
@@ -14,6 +15,9 @@ class EditProductViewModel extends ChangeNotifier {
   String? errorMessage;
 
   EditProductViewModel(this._productRepository);
+
+  // Exponer el servicio de conectividad
+  ConnectivityService get connectivity => _productRepository.connectivity;
 
   /// Updates a product, including handling new images and deleting removed ones.
   Future<bool> updateProduct({
@@ -28,17 +32,32 @@ class EditProductViewModel extends ChangeNotifier {
 
     bool result = false;
 
-    await _productRepository.updateProduct(
-      productId: productId, 
-      updatedProduct: updatedProduct,
-      newImages: newImages,
-      imagesToDelete: imagesToDelete,
-    ).then((_) {
-      result = true;
-    }).catchError((e) {
+    try {
+      final isOnline = await connectivity.isOnline$.first;
+      
+      if (!isOnline) {
+        // Guardar en pending_products si estamos offline
+        await _productRepository.updateProductOffline(
+          productId: productId,
+          updatedProduct: updatedProduct,
+          newImages: newImages,
+          imagesToDelete: imagesToDelete,
+        );
+        result = true;
+      } else {
+        // Actualizar normalmente si hay conexión
+        await _productRepository.updateProduct(
+          productId: productId,
+          updatedProduct: updatedProduct,
+          newImages: newImages,
+          imagesToDelete: imagesToDelete,
+        );
+        result = true;
+      }
+    } catch (e) {
       errorMessage = e.toString();
       result = false;
-    });
+    }
 
     isLoading = false;
     notifyListeners();

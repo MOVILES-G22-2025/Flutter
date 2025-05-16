@@ -182,7 +182,9 @@ class _MyProductsPageState extends State<MyProductsPage> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => ChangeNotifierProvider(
-                            create: (_) => EditProductViewModel(context.read()),
+                            create: (_) => EditProductViewModel(
+                              context.read<ProductRepository>(),
+                            ),
                             child: EditProductPage(product: product),
                           ),
                         ),
