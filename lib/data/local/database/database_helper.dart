@@ -260,6 +260,17 @@ class DatabaseHelper {
     );
   }
 
+  // Obtener productos del usuario desde cached_products
+  Future<List<Map<String, dynamic>>> getCachedUserProducts(String userId) async {
+    final db = await database;
+    return await db.query(
+      'cached_products',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+    );
+  }
+
   // —— OPERATIONS ON pending_users —— //
 
   Future<void> savePendingUser(Map<String, dynamic> user) async {

@@ -557,4 +557,46 @@ class ProductRepositoryImpl implements ProductRepository {
       );
     }).toList();
   }
+
+  /// Obtiene los productos del usuario, online u offline
+  Future<List<Product>> getUserProducts(String userId) async {
+    final online = await _connectivity.isOnline$.first;
+    
+    if (online) {
+      // Online: obtener de Firestore
+      final snapshot = await _firestore
+          .collection('products')
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .get();
+      
+      return snapshot.docs.map((doc) {
+        final dto = ProductDTO.fromFirestore(doc.id, doc.data());
+        return dto.toDomain();
+      }).toList();
+    } else {
+      // Offline: obtener de cached_products
+      final cachedProducts = await _db.getCachedUserProducts(userId);
+      return cachedProducts.map((product) {
+        final urls = (product['imageUrls'] as String).split(',');
+        final favoritedBy = (jsonDecode(product['favoritedBy'] as String) as List).cast<String>();
+        final timestamp = product['timestamp'] != null 
+            ? DateTime.fromMillisecondsSinceEpoch(product['timestamp'] as int)
+            : null;
+        
+        return Product(
+          id: product['id'] as String,
+          name: product['name'] as String,
+          description: product['description'] as String,
+          category: product['category'] as String,
+          price: product['price'] as double,
+          imageUrls: urls,
+          sellerName: product['sellerName'] as String,
+          favoritedBy: favoritedBy,
+          timestamp: timestamp,
+          userId: product['userId'] as String,
+        );
+      }).toList();
+    }
+  }
 }

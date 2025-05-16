@@ -57,4 +57,7 @@ abstract class ProductRepository {
 
   /// Obtiene los productos de la caché local
   Future<List<Product>> getCachedProducts();
+
+  /// Obtiene los productos del usuario, online u offline
+  Future<List<Product>> getUserProducts(String userId);
 }
