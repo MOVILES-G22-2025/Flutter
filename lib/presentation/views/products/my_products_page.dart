@@ -138,15 +138,14 @@ class _MyProductsPageState extends State<MyProductsPage> {
           ),
           const SizedBox(height: 14),
           Expanded(
-            child: StreamBuilder<List<Product>>(
-              stream: _productRepo.getProductsStream(),
+            child: FutureBuilder<List<Product>>(
+              future: _productRepo.getUserProducts(user.uid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final allProducts = snapshot.data ?? [];
-                final myProducts = allProducts.where((p) => p.userId == user.uid).toList();
+                final myProducts = snapshot.data ?? [];
 
                 final displayedProducts = searchQuery.isEmpty
                     ? myProducts
