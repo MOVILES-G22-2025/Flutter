@@ -26,84 +26,56 @@ class EditProductViewModel extends ChangeNotifier {
     required Product updatedProduct,
     required List<XFile?> newImages,
     required List<String> imagesToDelete,
-    // Async
+    // async
   }) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
-    bool result = false;
-    try {
-      // await
-      final isOnline = await connectivity.isOnline$.first;
-      if (!isOnline) {
-        await _productRepository.updateProductOffline(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        );
-      } else {
-        // Online: actualizar en remoto
-        await _productRepository.updateProduct(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        );
-      }
-      result = true;
-    } catch (e) {
-      errorMessage = e.toString();
-      result = false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
+    // await
+    final isOnline = await connectivity.isOnline$.first;
+
+    // 3) Preparo el Future que va a realizar la operación
+    Future<bool> operation;
+    if (!isOnline) {
+      // — Si estamos offline guardamos en pending
+      operation = _productRepository
+          .updateProductOffline(
+        productId: productId,
+        updatedProduct: updatedProduct,
+        newImages: newImages,
+        imagesToDelete: imagesToDelete,
+      ) // then
+          .then((_) => true)
+        // catchError
+          .catchError((e) {                   // en fallo capturamos mensaje
+        errorMessage = e.toString();
+        return false;
+      });
+    } else {
+      // — Si hay conexión actualizamos en remoto
+      operation = _productRepository
+          .updateProduct(
+        productId: productId,
+        updatedProduct: updatedProduct,
+        newImages: newImages,
+        imagesToDelete: imagesToDelete,
+      )
+          .then((_) => true)
+          .catchError((e) {
+        errorMessage = e.toString();
+        return false;
+      });
     }
-    return result;
-  }
 
-  /// handlers (.then / .catchError / .whenComplete)
-  Future<bool> updateProductWithHandlers({
-    required String productId,
-    required Product updatedProduct,
-    required List<XFile?> newImages,
-    required List<String> imagesToDelete,
-  }) {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    return connectivity.isOnline$.first
-        .then((isOnline) {
-      if (!isOnline) {
-        return _productRepository
-            .updateProductOffline(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        )
-            .then((_) => true);
-      } else {
-        return _productRepository
-            .updateProduct(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        )
-            .then((_) => true);
-      }
-    })
-        .catchError((e) {
-      errorMessage = e.toString();
-      return false;
-    })
-        .whenComplete(() {
+    // whenComplete
+    operation.whenComplete(() {
       isLoading = false;
       notifyListeners();
     });
+
+    // Devuelvo el resultado del Future handler
+    return operation;
   }
 
   // Isolate strategy
