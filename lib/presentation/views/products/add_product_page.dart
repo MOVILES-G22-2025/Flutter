@@ -298,7 +298,8 @@ class _AddProductPageState extends State<AddProductPage> {
                       backgroundColor: _isFormValid
                           ? constants.AppColors.primary30
                           : constants.AppColors.secondary40,
-                      padding: const EdgeInsets.symmetric(horizontal: 150, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+
                       textStyle: const TextStyle(
                         fontFamily: 'Cabin',
                         fontSize: 18,

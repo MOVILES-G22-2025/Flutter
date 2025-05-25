@@ -599,4 +599,49 @@ class ProductRepositoryImpl implements ProductRepository {
       }).toList();
     }
   }
+
+  @override
+  Future<void> addToFavorites(String productId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore.collection('users').doc(user.uid).update({
+      'favorites': FieldValue.arrayUnion([productId]),
+    });
+  }
+
+  @override
+  Future<void> removeFromFavorites(String productId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore.collection('users').doc(user.uid).update({
+      'favorites': FieldValue.arrayRemove([productId]),
+    });
+  }
+
+  @override
+  Future<int> getClickCount(String productId) async {
+    try {
+      final doc = await _firestore.collection('products').doc(productId).get();
+      if (doc.exists) {
+        return doc.data()?['clickCount'] as int? ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('Error getting click count: $e');
+      return 0;
+    }
+  }
+
+  @override
+  Future<void> recordClick(String productId) async {
+    try {
+      await _firestore.collection('products').doc(productId).update({
+        'clickCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      print('Error recording click: $e');
+    }
+  }
 }

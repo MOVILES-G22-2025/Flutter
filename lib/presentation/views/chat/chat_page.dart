@@ -9,16 +9,61 @@ import 'package:senemarket/constants.dart';
 import '../../../core/services/custom_cache_manager.dart';
 import 'viewmodel/chat_viewmodel.dart';
 import 'package:senemarket/domain/entities/chat_message.dart';
+import 'package:senemarket/domain/repositories/user_repository.dart';
+import 'package:senemarket/presentation/views/profile/seller_profile_page.dart';
+import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
+import 'package:senemarket/domain/repositories/chat_repository.dart';
+import 'package:senemarket/core/services/connectivity_service.dart';
+import 'package:senemarket/data/local/operation_queue.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class ChatPage extends StatefulWidget {
+class ChatPage extends StatelessWidget {
+  final String receiverId;
   final String receiverName;
-  const ChatPage({Key? key, required this.receiverName}) : super(key: key);
+
+  const ChatPage({
+    Key? key,
+    required this.receiverId,
+    required this.receiverName,
+  }) : super(key: key);
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  Widget build(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return const SizedBox.shrink();
+
+    return ChangeNotifierProvider(
+      create: (_) => ChatViewModel(
+        context.read<ChatRepository>(),
+        context.read<UserRepository>(),
+        context.read<ConnectivityService>(),
+        context.read<OperationQueue>(),
+        currentUserId,
+        receiverId,
+      ),
+      child: ChatPageContent(
+        receiverId: receiverId,
+        receiverName: receiverName,
+      ),
+    );
+  }
 }
 
-class _ChatPageState extends State<ChatPage> {
+class ChatPageContent extends StatefulWidget {
+  final String receiverId;
+  final String receiverName;
+
+  const ChatPageContent({
+    Key? key,
+    required this.receiverId,
+    required this.receiverName,
+  }) : super(key: key);
+
+  @override
+  _ChatPageContentState createState() => _ChatPageContentState();
+}
+
+class _ChatPageContentState extends State<ChatPageContent> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
 
@@ -102,9 +147,31 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       backgroundColor: AppColors.primary50,
       appBar: AppBar(
-        backgroundColor: AppColors.primary40,
+        title: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SellerProfilePage(
+                  sellerId: widget.receiverId,
+                  sellerName: widget.receiverName,
+                  sellerImageUrl: vm.receiverImageUrl,
+                ),
+              ),
+            );
+          },
+          child: Text(
+            widget.receiverName,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cabin',
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
-        title: Text(widget.receiverName, style: const TextStyle(fontFamily: 'Cabin', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary0)),
       ),
       body: Column(
         children: [

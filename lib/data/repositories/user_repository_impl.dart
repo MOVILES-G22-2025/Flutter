@@ -144,6 +144,20 @@ class UserRepositoryImpl implements UserRepository {
     }
   }
 
+  @override
+  Future<String?> getUserProfileImage(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return doc.data()?['profileImageUrl'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user profile image: $e');
+      return null;
+    }
+  }
+
   // ─── CRUD LOCAL SQLITE ────────────────────────────────────────
 
   Future<void> insertUser(Map<String, dynamic> user) async {

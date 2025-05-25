@@ -49,6 +49,8 @@ flutter:
   assets:
     - assets/fonts/
     - assets/images/senemarket-logo.png
+    - assets/images/nequi_logo.png
+    - assets/images/daviplata_logo.png
 
   fonts:
     - family: Cabin

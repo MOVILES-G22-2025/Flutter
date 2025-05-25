@@ -9,20 +9,25 @@ import '../../../../domain/repositories/product_repository.dart';
 import '../../../../domain/repositories/user_repository.dart';
 
 class ProductDetailViewModel extends ChangeNotifier {
-  final ProductRepository _productRepository;
-  final UserRepository _userRepository;
+  final ProductRepository _productRepo;
+  final UserRepository _userRepo;
   final FirebaseAuth _auth;
   final _db = DatabaseHelper();
 
-  bool isFavorite = false;
-  bool isClickLoading = false;
-  int clickCount = 0;
+  bool _isFavorite = false;
+  bool get isFavorite => _isFavorite;
 
-  ProductDetailViewModel(
-      this._productRepository,
-      this._userRepository, {
-        FirebaseAuth? auth,
-      }) : _auth = auth ?? FirebaseAuth.instance;
+  int _clickCount = 0;
+  int get clickCount => _clickCount;
+
+  bool _isClickLoading = false;
+  bool get isClickLoading => _isClickLoading;
+
+  String? _sellerImageUrl;
+  String? get sellerImageUrl => _sellerImageUrl;
+
+  ProductDetailViewModel(this._productRepo, this._userRepo, {required FirebaseAuth auth})
+      : _auth = auth;
 
   /// Inicializa estado de favorito leyendo siempre la tabla local
   Future<void> init(Product product) async {
@@ -38,11 +43,13 @@ class ProductDetailViewModel extends ChangeNotifier {
     ));
     if (rows.isNotEmpty) {
       final favList = (jsonDecode(rows.first['favoritedBy'] as String) as List).cast<String>();
-      isFavorite = favList.contains(user.uid);
+      _isFavorite = favList.contains(user.uid);
     } else {
-      isFavorite = false;
+      _isFavorite = false;
     }
 
+    _clickCount = await _productRepo.getClickCount(product.id);
+    _sellerImageUrl = await _userRepo.getUserProfileImage(product.userId);
     notifyListeners();
   }
 
@@ -50,13 +57,13 @@ class ProductDetailViewModel extends ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    isClickLoading = true;
+    _isClickLoading = true;
     notifyListeners();
 
-    await _productRepository.logProductClick(user.uid, productId);
-    clickCount = await _productRepository.fetchProductClickCount(productId);
+    await _productRepo.recordClick(productId);
+    _clickCount = await _productRepo.getClickCount(productId);
 
-    isClickLoading = false;
+    _isClickLoading = false;
     notifyListeners();
   }
 
@@ -65,20 +72,14 @@ class ProductDetailViewModel extends ChangeNotifier {
     if (user == null) return;
 
     // 1) Actualizo remoto/cola y local (cached_products) a través del repo:
-    if (isFavorite) {
-      await _productRepository.removeProductFavorite(
-        userId: user.uid,
-        productId: product.id,
-      );
+    if (_isFavorite) {
+      await _productRepo.removeFromFavorites(product.id);
     } else {
-      await _productRepository.addProductFavorite(
-        userId: user.uid,
-        productId: product.id,
-      );
+      await _productRepo.addToFavorites(product.id);
     }
 
     // 2) Cambio estado UI y notifico
-    isFavorite = !isFavorite;
+    _isFavorite = !_isFavorite;
     notifyListeners();
   }
 }

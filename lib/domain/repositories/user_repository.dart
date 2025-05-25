@@ -16,5 +16,7 @@ abstract class UserRepository {
   Future<void> incrementCategoryClick(String userId, String category);
 
   Future<void> syncPendingUsers();
+
+  Future<String?> getUserProfileImage(String userId);
 }
 

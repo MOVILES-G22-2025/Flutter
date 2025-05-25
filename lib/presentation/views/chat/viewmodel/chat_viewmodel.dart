@@ -6,16 +6,20 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:senemarket/domain/entities/chat_message.dart';
 import 'package:senemarket/domain/repositories/chat_repository.dart';
+import 'package:senemarket/domain/repositories/user_repository.dart';
 import 'package:senemarket/core/services/connectivity_service.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import '../../../../data/local/models/operation.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _chatRepo;
+  final UserRepository _userRepo;
   final ConnectivityService _connectivity;
   final OperationQueue _opQueue;
   final String currentUserId;
   final String otherUserId;
+  String? _receiverImageUrl;
+  String? get receiverImageUrl => _receiverImageUrl;
 
   List<ChatMessage> messages = [];
   bool isLoading = true;
@@ -24,11 +28,14 @@ class ChatViewModel extends ChangeNotifier {
 
   ChatViewModel(
       this._chatRepo,
+      this._userRepo,
       this._connectivity,
       this._opQueue,
       this.currentUserId,
       this.otherUserId,
       ) {
+    _init();
+
     // 0) Cargar placeholders de operaciones pendientes
     final pendingOps = _opQueue.pending().where((op) => op.type == OperationType.sendMessage);
     for (var op in pendingOps) {
@@ -82,6 +89,11 @@ class ChatViewModel extends ChangeNotifier {
     _connSub = _connectivity.isOnline$.listen((online) {
       if (online) _flushPending();
     });
+  }
+
+  Future<void> _init() async {
+    _receiverImageUrl = await _userRepo.getUserProfileImage(otherUserId);
+    notifyListeners();
   }
 
   Future<void> sendMessage(String text) async {

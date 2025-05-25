@@ -243,12 +243,16 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
             return ChangeNotifierProvider(
               create: (_) => ChatViewModel(
                 ctx.read<ChatRepository>(),
+                ctx.read<UserRepository>(),
                 ctx.read<ConnectivityService>(),
                 ctx.read<OperationQueue>(),
                 currentUserId,
                 receiverId,
               ),
-              child: ChatPage(receiverName: receiverName),
+              child: ChatPage(
+                receiverId: receiverId,
+                receiverName: receiverName,
+              ),
             );
           },
         },

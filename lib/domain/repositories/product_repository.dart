@@ -60,4 +60,16 @@ abstract class ProductRepository {
 
   /// Obtiene los productos del usuario, online u offline
   Future<List<Product>> getUserProducts(String userId);
+
+  /// Adds a product to the current user's favorites
+  Future<void> addToFavorites(String productId);
+
+  /// Removes a product from the current user's favorites
+  Future<void> removeFromFavorites(String productId);
+
+  /// Gets the click count for a specific product
+  Future<int> getClickCount(String productId);
+
+  /// Records a click on a product
+  Future<void> recordClick(String productId);
 }

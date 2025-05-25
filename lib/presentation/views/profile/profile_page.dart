@@ -9,6 +9,7 @@ import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import 'package:senemarket/core/services/custom_cache_manager.dart';
 
 import 'package:senemarket/data/repositories/user_repository_impl.dart';
+import 'package:senemarket/presentation/views/profile/payment_methods_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -174,6 +175,16 @@ class _ProfilePageState extends State<ProfilePage> {
             }),
             _buildOptionTile('Favorites', Icons.favorite, () {
               Navigator.pushNamed(context, '/favorites');
+            }),
+            _buildOptionTile('Métodos de pago', Icons.payment, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentMethodsScreen(
+                    currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                  ),
+                ),
+              );
             }),
             const SizedBox(height: 90),
             Positioned(

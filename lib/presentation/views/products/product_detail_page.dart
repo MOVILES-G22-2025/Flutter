@@ -10,6 +10,7 @@ import 'package:senemarket/presentation/views/products/widgets/product_image_car
 import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import '../../../domain/repositories/product_repository.dart';
 import '../cart/viewmodel/cart_viewmodel.dart';
+import '../profile/seller_profile_page.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -186,13 +187,34 @@ class ProductDetailPageContent extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          product.sellerName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontFamily: 'Cabin',
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SellerProfilePage(
+                                  sellerId: product.userId,
+                                  sellerName: product.sellerName,
+                                  sellerImageUrl: vm.sellerImageUrl,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  product.sellerName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontFamily: 'Cabin',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios, size: 16),
+                            ],
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -257,7 +279,7 @@ class ProductDetailPageContent extends StatelessWidget {
             // ── Acciones: Añadir al carrito + Comprar ──
             Row(
               children: [
-                // Botón “Add to cart”
+                // Botón "Add to cart"
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
@@ -295,7 +317,7 @@ class ProductDetailPageContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Botón “Buy now”
+                // Botón "Buy now"
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
