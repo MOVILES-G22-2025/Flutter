@@ -11,6 +11,9 @@ import 'package:senemarket/presentation/widgets/global/navigation_bar.dart';
 import '../../../domain/repositories/product_repository.dart';
 import '../cart/viewmodel/cart_viewmodel.dart';
 
+import '../seller/seller_profile_page.dart';
+
+
 class ProductDetailPage extends StatelessWidget {
   final Product product;
   final int originIndex;
@@ -186,13 +189,25 @@ class ProductDetailPageContent extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          product.sellerName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontFamily: 'Cabin',
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SellerProfilePage(userId: product.userId),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            product.sellerName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontFamily: 'Cabin',
+                              decoration: TextDecoration.underline, // Opcional: para indicar que es "clickable"
+                              color: Colors.blue, // Opcional: para distinguir que es un link
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
