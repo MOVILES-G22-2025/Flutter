@@ -204,7 +204,7 @@ class ProductDetailPageContent extends StatelessWidget {
                               fontSize: 18,
                               fontFamily: 'Cabin',
                               decoration: TextDecoration.underline, // Opcional: para indicar que es "clickable"
-                              color: Colors.blue, // Opcional: para distinguir que es un link
+                              color: Colors.black, // Opcional: para distinguir que es un link
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
