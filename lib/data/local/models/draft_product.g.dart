@@ -26,13 +26,14 @@ class DraftProductAdapter extends TypeAdapter<DraftProduct> {
       createdAt: fields[6] as DateTime?,
       imagePaths: (fields[7] as List?)?.cast<String>(),
       lastUpdated: fields[8] as DateTime?,
+      isComplete: fields[9] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, DraftProduct obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class DraftProductAdapter extends TypeAdapter<DraftProduct> {
       ..writeByte(7)
       ..write(obj.imagePaths)
       ..writeByte(8)
-      ..write(obj.lastUpdated);
+      ..write(obj.lastUpdated)
+      ..writeByte(9)
+      ..write(obj.isComplete);
   }
 
   @override

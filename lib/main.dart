@@ -31,6 +31,7 @@ import 'package:senemarket/core/services/notification_service.dart';
 import 'package:senemarket/data/local/models/operation.dart';
 import 'package:senemarket/data/local/operation_queue.dart';
 import 'package:senemarket/data/local/models/draft_product.dart';
+import 'package:senemarket/data/local/models/cached_user.dart';
 import 'package:senemarket/presentation/views/cart/cart_page.dart';
 import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart';
 
@@ -81,6 +82,9 @@ void main() async {
   Hive.registerAdapter(OperationTypeAdapter());
   Hive.registerAdapter(DraftProductAdapter());
   Hive.registerAdapter(CartItemAdapter());
+  Hive.registerAdapter(CachedUserAdapter());
+
+
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
   await Hive.openBox<CartItem>('cart');

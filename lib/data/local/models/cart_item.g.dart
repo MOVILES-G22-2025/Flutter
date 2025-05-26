@@ -8,7 +8,7 @@ part of 'cart_item.dart';
 
 class CartItemAdapter extends TypeAdapter<CartItem> {
   @override
-  final int typeId = 4;
+  final int typeId = 8;
 
   @override
   CartItem read(BinaryReader reader) {
@@ -22,17 +22,17 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       price: fields[2] as double,
       quantity: fields[3] as int,
       imageUrl: fields[4] as String,
-      description: fields[5] as String,
-      category: fields[6] as String,
+      description: fields[5] as String?,
+      category: fields[6] as String?,
       sellerName: fields[7] as String,
-      userId: fields[8] as String,
+      userId: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CartItem obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)

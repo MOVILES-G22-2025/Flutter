@@ -5,8 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:senemarket/domain/entities/product.dart';
 import 'package:senemarket/domain/repositories/product_repository.dart';
 import 'package:senemarket/core/services/connectivity_service.dart';
-
-import '../../../../core/services/custom_cache_manager.dart';
+import 'package:senemarket/core/services/custom_cache_manager.dart';
 
 class EditProductViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
@@ -19,53 +18,69 @@ class EditProductViewModel extends ChangeNotifier {
   // Exponer el servicio de conectividad
   ConnectivityService get connectivity => _productRepository.connectivity;
 
-  /// Updates a product, including handling new images and deleting removed ones.
+  /// 1) IMPLEMENTACIÓN CON async/await + try/catch/finally
+
+  // Future
   Future<bool> updateProduct({
     required String productId,
     required Product updatedProduct,
     required List<XFile?> newImages,
     required List<String> imagesToDelete,
+    // async
   }) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
-    bool result = false;
+    // await
+    final isOnline = await connectivity.isOnline$.first;
 
-    try {
-      final isOnline = await connectivity.isOnline$.first;
-      
-      if (!isOnline) {
-        // Guardar en pending_products si estamos offline
-        await _productRepository.updateProductOffline(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        );
-        result = true;
-      } else {
-        // Actualizar normalmente si hay conexión
-        await _productRepository.updateProduct(
-          productId: productId,
-          updatedProduct: updatedProduct,
-          newImages: newImages,
-          imagesToDelete: imagesToDelete,
-        );
-        result = true;
-      }
-    } catch (e) {
-      errorMessage = e.toString();
-      result = false;
+    // 3) Preparo el Future que va a realizar la operación
+    Future<bool> operation;
+    if (!isOnline) {
+      // — Si estamos offline guardamos en pending
+      operation = _productRepository
+          .updateProductOffline(
+        productId: productId,
+        updatedProduct: updatedProduct,
+        newImages: newImages,
+        imagesToDelete: imagesToDelete,
+      ) // then
+          .then((_) => true)
+        // catchError
+          .catchError((e) {                   // en fallo capturamos mensaje
+        errorMessage = e.toString();
+        return false;
+      });
+    } else {
+      // — Si hay conexión actualizamos en remoto
+      operation = _productRepository
+          .updateProduct(
+        productId: productId,
+        updatedProduct: updatedProduct,
+        newImages: newImages,
+        imagesToDelete: imagesToDelete,
+      )
+          .then((_) => true)
+          .catchError((e) {
+        errorMessage = e.toString();
+        return false;
+      });
     }
 
-    isLoading = false;
-    notifyListeners();
-    return result;
+    // whenComplete
+    operation.whenComplete(() {
+      isLoading = false;
+      notifyListeners();
+    });
+
+    // Devuelvo el resultado del Future handler
+    return operation;
   }
 
-  //Isolate strategy
-  Future<void> clearEditedImagesFromCache(List<String> oldUrls, List<String> updatedUrls) async {
+  // Isolate strategy
+  Future<void> clearEditedImagesFromCache(
+      List<String> oldUrls, List<String> updatedUrls) async {
     final receivePort = ReceivePort();
 
     await Isolate.spawn<_ImageCleanupPayload>(
@@ -77,12 +92,12 @@ class EditProductViewModel extends ChangeNotifier {
       ),
     );
 
-    await receivePort.first; //Esperar confirmación
+    await receivePort.first; // Esperar confirmación
     receivePort.close();
   }
 }
 
-//Payload para pasar a la función aislada
+// Payload para pasar a la función aislada
 class _ImageCleanupPayload {
   final List<String> oldUrls;
   final List<String> updatedUrls;
@@ -95,7 +110,7 @@ class _ImageCleanupPayload {
   });
 }
 
-//Función ejecutada en el Isolate
+// Función ejecutada en el Isolate
 void _clearImagesWorker(_ImageCleanupPayload payload) async {
   final manager = CustomCacheManager.instance;
 
@@ -104,6 +119,6 @@ void _clearImagesWorker(_ImageCleanupPayload payload) async {
       await manager.removeFile(url);
     }
   }
-  //Notifica que terminó
+  // Notifica que terminó
   payload.sendPort.send(true);
 }
