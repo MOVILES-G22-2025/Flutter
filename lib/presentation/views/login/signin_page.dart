@@ -116,7 +116,7 @@ class _SignInPageState extends State<SignInPage> {
     await signInVM.signIn(email, password);
 
     if (signInVM.errorMessage.isEmpty) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/verify_otp');
     }
   }
 }

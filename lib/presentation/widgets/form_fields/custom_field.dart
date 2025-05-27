@@ -9,7 +9,8 @@ class CustomTextField extends StatelessWidget {
   final bool isNumeric;
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
-  final String? Function(String?)? validator; // ← añadido
+  final String? Function(String?)? validator;
+  final int? maxLength;
 
   const CustomTextField({
     Key? key,
@@ -18,7 +19,8 @@ class CustomTextField extends StatelessWidget {
     this.isNumeric = false,
     this.onChanged,
     this.focusNode,
-    this.validator, // ← añadido
+    this.validator,
+    this.maxLength,
   }) : super(key: key);
 
   @override
@@ -28,6 +30,7 @@ class CustomTextField extends StatelessWidget {
       child: TextFormField(  // ← TextFormField en lugar de TextField
         controller: controller,
         focusNode: focusNode,
+        maxLength: maxLength,
         keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         inputFormatters:
         isNumeric ? [FilteringTextInputFormatter.digitsOnly] : null,
