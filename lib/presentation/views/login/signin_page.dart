@@ -113,13 +113,10 @@ class _SignInPageState extends State<SignInPage> {
       return;
     }
 
-    final success = await signInVM.signIn(email, password);
+    await signInVM.signIn(email, password);
 
-    if (success) {
-      //Navegamos si fue exitoso
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/verify_otp');
-      }
+    if (signInVM.errorMessage.isEmpty) {
+      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 }

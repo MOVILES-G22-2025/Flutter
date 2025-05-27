@@ -1,8 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:hive/hive.dart';
-import '../../../../core/services/otp_service.dart';
-import '../../../../data/local/models/otp_info.dart';
 import '../../../../domain/repositories/auth_repository.dart';
 import '../../../../data/local/database/services/sync_service.dart';
 
@@ -19,7 +15,7 @@ class SignInViewModel extends ChangeNotifier {
 
   /// Tries to sign in with email and password.
   /// Shows loading and error state to the UI.
-  Future<bool> signIn(String email, String password) async {
+  Future<void> signIn(String email, String password) async {
     isLoading = true;
     errorMessage = '';
     notifyListeners();
@@ -28,31 +24,12 @@ class SignInViewModel extends ChangeNotifier {
 
     if (error != null) {
       errorMessage = error;
-      isLoading = false;
-      notifyListeners();
-      return false;
+    } else {
+      // Si el inicio de sesión fue exitoso, sincronizamos el usuario
+      await _syncService.sincronizarUsuarioPorEmail(email); // Sincronizamos el usuario por su email
     }
 
-    //Esperar hasta que FirebaseAuth detecte el usuario autenticado
-    await FirebaseAuth.instance.authStateChanges().firstWhere((user) => user != null);
-
-    await _syncService.sincronizarUsuarioPorEmail(email);
-
-    try {
-      if (!Hive.isBoxOpen('otp_info')) {
-        await Hive.openBox<OtpInfo>('otp_info');
-      }
-
-      await OtpService.generateAndSendOtp(email);
-
-      isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      errorMessage = 'Error sending the code. Please try again.';
-      isLoading = false;
-      notifyListeners();
-      return false;
-    }
+    isLoading = false;
+    notifyListeners();
   }
 }

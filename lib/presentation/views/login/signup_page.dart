@@ -265,7 +265,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
 
     if (signUpVM.errorMessage.isEmpty) {
-      Navigator.pushReplacementNamed(context, '/verify_otp');
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       setState(() {
         _localErrorMessage = signUpVM.errorMessage;
