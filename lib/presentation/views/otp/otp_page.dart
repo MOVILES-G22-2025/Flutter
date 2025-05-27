@@ -89,7 +89,9 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: vm.isVerifying ? null : vm.verifyCode,
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary30,
                         shape: RoundedRectangleBorder(
@@ -97,9 +99,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
                       ),
-                      child: vm.isVerifying
-                          ? const CircularProgressIndicator()
-                          : const Text(
+                      child: const Text(
                         'Verify',
                         style: TextStyle(
                           fontFamily: 'Cabin',
