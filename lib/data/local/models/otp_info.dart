@@ -1,7 +1,7 @@
 import 'package:hive/hive.dart';
 part 'otp_info.g.dart';
 
-@HiveType(typeId: 3)
+@HiveType(typeId: 11)
 class OtpInfo extends HiveObject {
   @HiveField(0)
   final String otpCode;

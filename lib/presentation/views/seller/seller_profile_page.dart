@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,6 +11,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
 import 'package:senemarket/data/local/models/cached_user.dart';
 import 'package:senemarket/data/repositories/product_repository_impl.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 class SellerProfilePage extends StatefulWidget {
   final String userId;
@@ -55,22 +58,42 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
     return connectivityResult != ConnectivityResult.none;
   }
 
+  // NUEVO: descarga la foto y retorna la ruta local, o "" si falla
+  Future<String> _downloadAndSaveProfileImage(String imageUrl, String userId) async {
+    if (imageUrl.isEmpty) return '';
+    try {
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode == 200) {
+        final dir = await getApplicationDocumentsDirectory();
+        final filePath = '${dir.path}/profile_$userId.jpg';
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+        return filePath;
+      }
+    } catch (_) {}
+    return '';
+  }
+
   Future<Map<String, dynamic>?> fetchSellerInfoAndCache() async {
     final doc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
     final data = doc.data();
     if (data != null) {
       final box = await Hive.openBox<CachedUser>('cached_users');
+      final photoUrl = data['profileImageUrl'] ?? '';
+      final localPath = await _downloadAndSaveProfileImage(photoUrl, widget.userId);
       final cachedUser = CachedUser(
         id: widget.userId,
         name: data['name'] ?? '',
         career: data['career'] ?? '',
         semester: data['semester']?.toString() ?? '',
-        photoUrl: data['photoUrl'] ?? '',
+        photoUrl: photoUrl,
+        localPhotoPath: localPath,
       );
       await box.put(widget.userId, cachedUser);
     }
     return data;
   }
+
 
   Future<CachedUser?> fetchSellerInfoOffline() async {
     final box = await Hive.openBox<CachedUser>('cached_users');
@@ -114,17 +137,19 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
                   name: seller['name'] ?? '',
                   career: seller['career'] ?? '',
                   semester: seller['semester']?.toString() ?? '',
-                  photoUrl: seller['photoUrl'] ?? '',
+                  photoUrl: seller['profileImageUrl'] ?? '',
+                  localPhotoPath: '', // No se usa online
                   offline: false,
                   navIndex: navIndex,
                 );
+
               },
             );
           } else {
             return FutureBuilder<CachedUser?>(
               future: fetchSellerInfoOffline(),
               builder: (context, snapshotOffline) {
-                if (!snapshotOffline.hasData) {
+                if (!snapshotOffline.hasData || snapshotOffline.data == null) {
                   return const Center(child: Text("No se encontró el usuario offline"));
                 }
                 final localUser = snapshotOffline.data!;
@@ -133,6 +158,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
                   career: localUser.career,
                   semester: localUser.semester,
                   photoUrl: localUser.photoUrl,
+                  localPhotoPath: localUser.localPhotoPath,
                   offline: true,
                   navIndex: navIndex,
                 );
@@ -150,6 +176,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
     required String career,
     required String semester,
     required String photoUrl,
+    String localPhotoPath = '',
     required bool offline,
     required int navIndex,
   }) {
@@ -160,21 +187,10 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
         if (offline)
           const Padding(
             padding: EdgeInsets.only(bottom: 10),
-            child: Center(
-
-            ),
+            child: Center(),
           ),
         Center(
-          child: photoUrl.isNotEmpty
-              ? CircleAvatar(
-            radius: 46,
-            backgroundImage: CachedNetworkImageProvider(photoUrl),
-          )
-              : const CircleAvatar(
-            radius: 46,
-            backgroundColor: Colors.grey,
-            child: Icon(Icons.person, size: 48, color: Colors.white),
-          ),
+          child: _buildAvatar(photoUrl, localPhotoPath, offline),
         ),
         const SizedBox(height: 16),
         Center(
@@ -233,6 +249,27 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
           ),
         ),
       ],
+    );
+  }
+
+  // Avatar, prioriza imagen local offline
+  Widget _buildAvatar(String photoUrl, String localPhotoPath, bool offline) {
+    if (offline && localPhotoPath.isNotEmpty && File(localPhotoPath).existsSync()) {
+      return CircleAvatar(
+        radius: 46,
+        backgroundImage: FileImage(File(localPhotoPath)),
+      );
+    }
+    if (photoUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 46,
+        backgroundImage: CachedNetworkImageProvider(photoUrl),
+      );
+    }
+    return const CircleAvatar(
+      radius: 46,
+      backgroundColor: Colors.grey,
+      child: Icon(Icons.person, size: 48, color: Colors.white),
     );
   }
 }

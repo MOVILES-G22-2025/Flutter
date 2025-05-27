@@ -83,6 +83,7 @@ void main() async {
   Hive.registerAdapter(DraftProductAdapter());
   Hive.registerAdapter(CartItemAdapter());
   Hive.registerAdapter(OtpInfoAdapter());
+  Hive.registerAdapter(CachedUserAdapter());
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
   await Hive.openBox<CartItem>('cart');
