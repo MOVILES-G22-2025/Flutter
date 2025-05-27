@@ -1,4 +1,4 @@
-package com.example.senemarket
+package com.company.senemarketotp
 
 import io.flutter.embedding.android.FlutterActivity
 

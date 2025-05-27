@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
+import '../../../../core/services/otp_service.dart';
 import '../../../../domain/repositories/auth_repository.dart';
 
 /// ViewModel that manages user registration logic and state.
@@ -36,6 +37,8 @@ class SignUpViewModel extends ChangeNotifier {
 
     if (result != null) {
       errorMessage = result;
+    } else {
+      await OtpService.generateAndSendOtp(email); // Envía OTP tras registro
     }
 
     isLoading = false;

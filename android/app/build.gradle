@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace = "com.example.senemarket"
+    namespace = "com.company.senemarketotp"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -39,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.senemarket"
+        applicationId = "com.company.senemarketotp"
         minSdk = 23
         targetSdk = 34
 

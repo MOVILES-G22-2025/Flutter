@@ -1,7 +1,5 @@
 import 'package:hive/hive.dart';
 
-part 'cached_user.g.dart';
-
 @HiveType(typeId: 20) // Usa un typeId único
 class CachedUser extends HiveObject {
   @HiveField(0)

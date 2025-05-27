@@ -32,7 +32,7 @@ class ProductRepository {
   Future<void> insertProduct(Map<String, dynamic> product) async {
     final db = await _databaseHelper.database;
     await db.insert(
-      'products',
+      'cached_products',
       product,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -40,24 +40,24 @@ class ProductRepository {
 
   Future<List<Map<String, dynamic>>> getProducts() async {
     final db = await _databaseHelper.database;
-    return await db.query('products');
+    return await db.query('cached_products');
   }
 
   Future<Map<String, dynamic>?> getProductById(String id) async {
     final db = await _databaseHelper.database;
-    final res = await db.query('products', where: 'id = ?', whereArgs: [id]);
+    final res = await db.query('cached_products', where: 'id = ?', whereArgs: [id]);
     return res.isNotEmpty ? res.first : null;
   }
 
   Future<void> updateProduct(Map<String, dynamic> product) async {
     final db = await _databaseHelper.database;
-    await db.update('products', product,
+    await db.update('cached_products', product,
         where: 'id = ?', whereArgs: [product['id']]);
   }
 
   Future<void> deleteProduct(String id) async {
     final db = await _databaseHelper.database;
-    await db.delete('products', where: 'id = ?', whereArgs: [id]);
+    await db.delete('cached_products', where: 'id = ?', whereArgs: [id]);
   }
 
   // ---------- Sync Firebase → SQLite ----------

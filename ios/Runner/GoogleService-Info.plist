@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyCGGxa3t7cv918yIP2OAOUBn8JJH3-8HsI</string>
+	<string>AIzaSyDtNg-H3t3FeAevMlko5n1gYJ-LVVOOsCM</string>
 	<key>GCM_SENDER_ID</key>
-	<string>153311830773</string>
+	<string>425110586172</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.senemarket</string>
+	<string>com.example.senemarketotp</string>
 	<key>PROJECT_ID</key>
-	<string>senemarket-app</string>
+	<string>senemarket-otp</string>
 	<key>STORAGE_BUCKET</key>
-	<string>senemarket-app.firebasestorage.app</string>
+	<string>senemarket-otp.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:153311830773:ios:ff3e300ef74ed3fd5d1bbc</string>
+	<string>1:425110586172:android:2fe59483a84a25d7541439</string>
 </dict>
 </plist>

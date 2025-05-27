@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:senemarket/constants.dart' as constants;
+import 'package:senemarket/data/local/models/otp_info.dart';
 
 // Repositorios
 import 'package:senemarket/data/repositories/auth_repository_impl.dart';
@@ -38,6 +38,7 @@ import 'package:senemarket/presentation/views/cart/viewmodel/cart_viewmodel.dart
 // ViewModels
 import 'package:senemarket/presentation/views/login/viewmodel/sign_in_viewmodel.dart';
 import 'package:senemarket/presentation/views/login/viewmodel/sign_up_viewmodel.dart';
+import 'package:senemarket/presentation/views/otp/otp_page.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/product_search_viewmodel.dart';
 import 'package:senemarket/presentation/views/products/viewmodel/add_product_viewmodel.dart';
 import 'package:senemarket/presentation/views/favorites/viewmodel/favorites_viewmodel.dart';
@@ -66,7 +67,6 @@ import 'package:senemarket/core/widgets/app_wrapper.dart';
 
 import 'package:senemarket/data/local/database/services/sync_service.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -82,19 +82,17 @@ void main() async {
   Hive.registerAdapter(OperationTypeAdapter());
   Hive.registerAdapter(DraftProductAdapter());
   Hive.registerAdapter(CartItemAdapter());
-  Hive.registerAdapter(CachedUserAdapter());
-
-
+  Hive.registerAdapter(OtpInfoAdapter());
   await Hive.openBox<Operation>('operation_queue');
   await Hive.openBox<DraftProduct>('draft_products');
   await Hive.openBox<CartItem>('cart');
+  await Hive.openBox<OtpInfo>('otp_info');
 
   // 1) Crea el servicio
   final syncService = SyncService();
 
   // 2) Arráncalo para que empiece a escuchar conectividad
   syncService.start();
-
 
   runApp(const SenemarketApp());
 
@@ -221,6 +219,7 @@ class _SenemarketAppState extends State<SenemarketApp> with WidgetsBindingObserv
           '/login': (_) => const LoginPage(),
           '/signIn': (_) => const SignInPage(),
           '/signUp': (_) => const SignUpPage(),
+          '/verify_otp': (_) => const OTPVerificationPage(email: '',),
           '/home': (_) => const HomePage(),
           '/cart': (_) => ChangeNotifierProvider(
             create: (_) => CartViewModel(),
