@@ -32,6 +32,8 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool _isVerifying = false;
+
     return ChangeNotifierProvider(
       create: (_) => OTPVerificationViewModel(widget.email)..startTimer(),
       child: Consumer<OTPVerificationViewModel>(
@@ -89,8 +91,14 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                      onPressed: _isVerifying
+                          ? null
+                          : () async {
+                        setState(() => _isVerifying = true);
+                        await Future.delayed(const Duration(seconds: 2));
+                        if (mounted) {
+                          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary30,
@@ -99,7 +107,16 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
                       ),
-                      child: const Text(
+                      child: _isVerifying
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary50,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Text(
                         'Verify',
                         style: TextStyle(
                           fontFamily: 'Cabin',
